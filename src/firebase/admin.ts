@@ -23,29 +23,8 @@ if (serviceKey) {
       *** Parser error: ${error.message}                          ***
       ****************************************************************
     `);
-    // Fallback to mock db to prevent app crash
-    db = {
-      collection: () => ({
-        get: () => Promise.resolve({ docs: [] }),
-        add: () => Promise.resolve(),
-        doc: () => ({
-          update: () => Promise.resolve(),
-          delete: () => Promise.resolve(),
-          collection: () => ({
-              get: () => Promise.resolve({ docs: [] }),
-              add: () => Promise.resolve(),
-          })
-        }),
-      }),
-      batch: () => ({
-          delete: () => {},
-          commit: () => Promise.resolve(),
-      }),
-      writeBatch: () => ({
-          delete: () => {},
-          commit: () => Promise.resolve(),
-      }),
-    };
+    // Fallback to a more complete mock db to prevent app crash
+    db = createMockDb();
   }
 } else {
   console.warn(`
@@ -56,29 +35,34 @@ if (serviceKey) {
     ****************************************************************
   `);
   // Use a mock db object if the service key is not set
-  db = {
-    collection: () => ({
-      get: () => Promise.resolve({ docs: [] }),
-      add: () => Promise.resolve(),
-      doc: () => ({
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-        collection: () => ({
-            get: () => Promise.resolve({ docs: [] }),
-            add: () => Promise.resolve(),
-        })
-      }),
-    }),
+  db = createMockDb();
+}
+
+function createMockDb() {
+  const mockDoc = {
+    update: () => Promise.resolve(),
+    delete: () => Promise.resolve(),
+    collection: () => mockCollection,
+  };
+
+  const mockCollection = {
+    get: () => Promise.resolve({ docs: [] }),
+    add: () => Promise.resolve(),
+    doc: () => mockDoc,
+  };
+
+  return {
+    collection: () => mockCollection,
+    doc: () => mockDoc,
     batch: () => ({
-        delete: () => {},
-        commit: () => Promise.resolve(),
+      delete: () => {},
+      commit: () => Promise.resolve(),
     }),
     writeBatch: () => ({
-        delete: () => {},
-        commit: () => Promise.resolve(),
+      delete: () => {},
+      commit: () => Promise.resolve(),
     }),
   };
 }
-
 
 export { db };
