@@ -12,6 +12,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  } from '@/components/ui/tooltip';
 
 type AdminNowPlayingProps = {
   nowPlaying: GroupedSong | null;
@@ -66,7 +72,18 @@ export function AdminNowPlaying({ nowPlaying }: AdminNowPlayingProps) {
                       {nowPlaying.requesters.map((requester, idx) => (
                          <li key={idx} className="flex items-center justify-between">
                           <span>{requester.singer}</span>
-                          {requester.announcement && <MessageSquare className="h-4 w-4 text-accent/80" />}
+                            {requester.announcement && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <MessageSquare className="h-4 w-4 text-accent/80"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs italic">"{requester.announcement}"</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                          </li>
                       ))}
                     </ul>

@@ -16,10 +16,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 
 type AdminQueueProps = {
   upcomingSongs: GroupedSong[];
@@ -101,11 +108,22 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
                         </PopoverTrigger>
                         <PopoverContent>
                           <h4 className="font-bold mb-2">Requesters</h4>
-                          <ul className="space-y-2 text-sm">
+                          <ul className="space-y-1 text-sm">
                             {song.requesters.map((r, i) => (
-                              <li key={i}>
-                                <p className="font-semibold">{r.singer}</p>
-                                {r.announcement && <p className="text-xs italic text-muted-foreground">"{r.announcement}"</p>}
+                              <li key={i} className="flex items-center justify-between">
+                                <span>{r.singer}</span>
+                                {r.announcement && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <MessageSquare className="h-4 w-4 text-accent/80"/>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-xs italic">"{r.announcement}"</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </li>
                             ))}
                           </ul>
