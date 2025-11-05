@@ -4,7 +4,7 @@ export type RequesterInfo = {
   announcement?: string;
 };
 
-export type SongStatus = 'queued' | 'playing' | 'finished';
+export type SongStatus = 'queued' | 'playing' | 'finished' | 'removed';
 
 export type Song = {
   id: string;
@@ -14,16 +14,18 @@ export type Song = {
   announcement?: string;
   status: SongStatus;
   createdAt: number;
-  isLocked?: boolean;
+  patronId: string;
+  isLocked: boolean;
+  sortOrder: number;
 };
 
 export type GroupedSong = {
+  id: string;
   title: string;
   artist: string;
   requesters: RequesterInfo[];
   status: SongStatus;
   createdAt: number;
-  id: string;
   isLocked?: boolean;
 };
 

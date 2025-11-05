@@ -10,7 +10,7 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ReviewDialog } from '@/components/ReviewDialog';
-import { type GroupedSong } from '@/lib/types';
+import { useQueue } from '@/hooks/useQueue';
 
 
 function QueueLoadingSkeleton() {
@@ -28,26 +28,27 @@ function QueueLoadingSkeleton() {
 
 
 export default function Home() {
-  // Data will be fetched via hooks in a later step
-  const nowPlaying: GroupedSong | null = null;
-  const queue: GroupedSong[] = [];
-  const history: GroupedSong[] = [];
+  const { nowPlaying, upcoming, history, isLoading } = useQueue();
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
         <Suspense fallback={<QueueLoadingSkeleton />}>
-           <div className="space-y-8">
-            <NowPlaying song={nowPlaying} />
-            <SongQueue songs={queue} title="Up Next" />
-            {history.length > 0 && (
-              <>
-                <Separator className="my-12" />
-                <SongQueue songs={history} title="Song History" isHistory />
-              </>
-            )}
-          </div>
+          {isLoading ? (
+            <QueueLoadingSkeleton />
+          ) : (
+            <div className="space-y-8">
+              <NowPlaying song={nowPlaying} />
+              <SongQueue songs={upcoming} title="Up Next" />
+              {history.length > 0 && (
+                <>
+                  <Separator className="my-12" />
+                  <SongQueue songs={history} title="Song History" isHistory />
+                </>
+              )}
+            </div>
+          )}
         </Suspense>
       </main>
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border p-4 z-10">
