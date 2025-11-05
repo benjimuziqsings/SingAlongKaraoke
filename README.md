@@ -1,5 +1,5 @@
-# Firebase Studio
+# Karaoke Queue Master
 
 This is a NextJS starter in Firebase Studio.
 
-To get started, take a look at src/app/page.tsx.
+This application allows karaoke bar patrons to submit song requests and a Karaoke Jockey (KJ) to manage the song queue in real time.

@@ -1,0 +1,35 @@
+import Link from 'next/link';
+import { Mic, UserCog, Users } from 'lucide-react';
+import { Button } from './ui/button';
+
+export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
+  return (
+    <header className="py-3 px-4 md:px-6 border-b border-border/50 sticky top-0 bg-background/80 backdrop-blur-sm z-20">
+      <div className="container mx-auto flex justify-between items-center">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="p-2 bg-primary/20 rounded-lg group-hover:bg-primary/30 transition-colors">
+            <Mic className="text-primary h-6 w-6" />
+          </div>
+          <h1 className="font-headline text-xl md:text-2xl whitespace-nowrap">
+            Karaoke Queue Master
+          </h1>
+        </Link>
+        <nav>
+          <Button asChild variant="ghost" size="sm">
+            {isAdmin ? (
+              <Link href="/">
+                <Users className="mr-2 h-4 w-4" />
+                Patron View
+              </Link>
+            ) : (
+              <Link href="/admin">
+                <UserCog className="mr-2 h-4 w-4" />
+                KJ View
+              </Link>
+            )}
+          </Button>
+        </nav>
+      </div>
+    </header>
+  );
+}

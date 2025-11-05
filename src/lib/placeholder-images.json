@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "karaoke-background",
+      "description": "Dimly lit karaoke stage background with a microphone",
+      "imageUrl": "https://images.unsplash.com/photo-1574593749297-cb33a69cd8d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxrYXJhb2tlJTIwc3RhZ2V8ZW58MHx8fHwxNzYyMzE3OTc1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "karaoke stage"
+    }
+  ]
 }
