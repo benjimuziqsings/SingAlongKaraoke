@@ -2,12 +2,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Artist } from '@/lib/karaoke-catalog';
-import { addArtist, addSongToCatalog, updateLyrics } from '@/lib/actions';
+import { addArtist, addSongToCatalog, updateLyrics, removeArtistFromCatalog, removeSongFromCatalog } from '@/lib/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PlusCircle, Music, BookText, Save, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const artistSchema = z.object({
   name: z.string().min(1, 'Artist name is required'),
@@ -60,30 +62,61 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     defaultValues: { artistName: '', title: '', lyrics: '' },
   });
 
+  const onFormSubmit = async (action: (formData: FormData) => Promise<any>, formData: FormData, successMessage: string) => {
+    const result = await action(formData);
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Error', description: result.error });
+    } else {
+      toast({ title: 'Success', description: successMessage });
+    }
+  };
+
   const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
-    const result = await addArtist(new FormData(document.createElement('form')));
-    const newArtist = { name: values.name, songs: [] };
-    setArtists(prev => [...prev, newArtist].sort((a, b) => a.name.localeCompare(b.name)));
-    toast({ title: 'Artist Added', description: `"${values.name}" has been added to the catalog.` });
+    const formData = new FormData();
+    formData.append('name', values.name);
+    await onFormSubmit(addArtist, formData, `"${values.name}" has been added.`);
+    // Optimistic update
+    setArtists(prev => [...prev, { name: values.name, songs: [] }].sort((a, b) => a.name.localeCompare(b.name)));
     artistForm.reset();
     setIsArtistDialogOpen(false);
   };
 
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
-    await addSongToCatalog(new FormData(document.createElement('form')));
-    setArtists(prev => prev.map(a => a.name === values.artistName ? { ...a, songs: [...a.songs, { title: values.title }] } : a));
-    toast({ title: 'Song Added', description: `"${values.title}" has been added for ${values.artistName}.` });
+    const formData = new FormData();
+    formData.append('artistName', values.artistName);
+    formData.append('title', values.title);
+    await onFormSubmit(addSongToCatalog, formData, `"${values.title}" added for ${values.artistName}.`);
+    setArtists(prev => prev.map(a => a.name === values.artistName ? { ...a, songs: [...a.songs, { title: values.title }].sort((s1,s2) => s1.title.localeCompare(s2.title)) } : a));
     songForm.reset();
     setIsSongDialogOpen(false);
   };
 
   const handleUpdateLyrics = async (values: z.infer<typeof lyricsSchema>) => {
-    await updateLyrics(new FormData(document.createElement('form')));
+    const formData = new FormData();
+    formData.append('artistName', values.artistName);
+    formData.append('title', values.title);
+    formData.append('lyrics', values.lyrics);
+    await onFormSubmit(updateLyrics, formData, `Lyrics for "${values.title}" updated.`);
     setArtists(prev => prev.map(a => a.name === values.artistName ? { ...a, songs: a.songs.map(s => s.title === values.title ? { ...s, lyrics: values.lyrics } : s) } : a));
-    toast({ title: 'Lyrics Updated', description: `Lyrics for "${values.title}" have been updated.` });
     lyricsForm.reset();
     setIsLyricsDialogOpen(false);
   };
+  
+  const handleRemoveArtist = async (artistName: string) => {
+    const formData = new FormData();
+    formData.append('artistName', artistName);
+    await onFormSubmit(removeArtistFromCatalog, formData, `"${artistName}" has been removed.`);
+    setArtists(prev => prev.filter(a => a.name !== artistName));
+  };
+
+  const handleRemoveSong = async (artistName: string, title: string) => {
+    const formData = new FormData();
+    formData.append('artistName', artistName);
+    formData.append('title', title);
+    await onFormSubmit(removeSongFromCatalog, formData, `"${title}" has been removed.`);
+    setArtists(prev => prev.map(a => a.name === artistName ? { ...a, songs: a.songs.filter(s => s.title !== title) } : a));
+  };
+
 
   const openSongDialog = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -139,23 +172,68 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
         <Accordion type="single" collapsible className="w-full">
           {artists.map((artist) => (
             <AccordionItem value={artist.name} key={artist.name}>
-              <AccordionTrigger className="font-bold text-lg">{artist.name}</AccordionTrigger>
+              <div className="flex items-center group">
+                 <AccordionTrigger className="font-bold text-lg flex-grow">{artist.name}</AccordionTrigger>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remove Artist</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove "{artist.name}" and all their songs from the catalog. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleRemoveArtist(artist.name)}>Remove</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+              </div>
               <AccordionContent>
                 <div className="space-y-2 pl-4">
                   {artist.songs.map((song) => (
-                    <div key={song.title} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                    <div key={song.title} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group">
                       <div className="flex items-center gap-2">
                         <Music className="h-4 w-4 text-primary" />
                         <span>{song.title}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openLyricsDialog(artist, song)}>
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit Lyrics</span>
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Remove Song</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove "{song.title}" from the catalog.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRemoveSong(artist.name, song.title)}>Remove</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   ))}
+                  {artist.songs.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-2">No songs for this artist yet.</p>
+                  )}
                   <Button variant="outline" size="sm" className="mt-2" onClick={() => openSongDialog(artist)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Song

@@ -253,3 +253,32 @@ export async function updateLyrics(formData: FormData) {
     revalidatePath('/admin');
     return { success: true };
 }
+
+export async function removeArtistFromCatalog(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const index = karaokeCatalog.findIndex(a => a.name === artistName);
+    if (index === -1) {
+        return { error: 'Artist not found.' };
+    }
+    karaokeCatalog.splice(index, 1);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+}
+
+export async function removeSongFromCatalog(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const title = formData.get('title') as string;
+    const artist = karaokeCatalog.find(a => a.name === artistName);
+    if (!artist) {
+        return { error: 'Artist not found.' };
+    }
+    const songIndex = artist.songs.findIndex(s => s.title === title);
+    if (songIndex === -1) {
+        return { error: 'Song not found.' };
+    }
+    artist.songs.splice(songIndex, 1);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+}
