@@ -14,10 +14,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '../ui/skeleton';
 
 
 const artistSchema = z.object({
@@ -38,11 +39,11 @@ const lyricsSchema = z.object({
 
 type CatalogManagementProps = {
   artists: Artist[];
+  isLoading: boolean;
 };
 
-export function CatalogManagement({ artists: initialArtists }: CatalogManagementProps) {
+export function CatalogManagement({ artists, isLoading }: CatalogManagementProps) {
   const { toast } = useToast();
-  const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);
   const [isSongDialogOpen, setIsSongDialogOpen] = useState(false);
   const [isLyricsDialogOpen, setIsLyricsDialogOpen] = useState(false);
@@ -65,14 +66,13 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     defaultValues: { artistId: '', songId: '', title: '', lyrics: '' },
   });
 
-  const onFormSubmit = async (action: (formData: FormData) => Promise<any>, formData: FormData, successMessage: string, optimisticUpdate: () => void) => {
+  const onFormSubmit = async (action: (formData: FormData) => Promise<any>, formData: FormData, successMessage: string) => {
     startTransition(async () => {
       const result = await action(formData);
-      if (result.error) {
+      if (result?.error) {
         toast({ variant: 'destructive', title: 'Error', description: result.error });
       } else {
         toast({ title: 'Success', description: successMessage });
-        optimisticUpdate();
       }
     });
   };
@@ -80,16 +80,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
   const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
     const formData = new FormData();
     formData.append('name', values.name);
-    // Note: We can't know the ID until it's created, so optimistic update is tricky.
-    // A full re-fetch or more complex state management would be needed.
-    // For now, we rely on revalidation which might have a slight delay.
-    const result = await addArtist(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: `"${values.name}" has been added.` });
-      // Manual refetch might be needed here, or rely on server revalidation
-    }
+    await onFormSubmit(addArtist, formData, `"${values.name}" has been added.`);
     artistForm.reset();
     setIsArtistDialogOpen(false);
   };
@@ -98,12 +89,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     const formData = new FormData();
     formData.append('artistId', values.artistId);
     formData.append('title', values.title);
-    const result = await addSongToCatalog(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: `"${values.title}" added for ${selectedArtist?.name}.` });
-    }
+    await onFormSubmit(addSongToCatalog, formData, `"${values.title}" added for ${selectedArtist?.name}.`);
     songForm.reset();
     setIsSongDialogOpen(false);
   };
@@ -113,12 +99,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     formData.append('artistId', values.artistId);
     formData.append('songId', values.songId);
     formData.append('lyrics', values.lyrics);
-    const result = await updateLyrics(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: `Lyrics for "${values.title}" updated.` });
-    }
+    await onFormSubmit(updateLyrics, formData, `Lyrics for "${values.title}" updated.`);
     lyricsForm.reset();
     setIsLyricsDialogOpen(false);
   };
@@ -126,24 +107,14 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
   const handleRemoveArtist = async (artistId: string, artistName: string) => {
     const formData = new FormData();
     formData.append('artistId', artistId);
-    const result = await removeArtistFromCatalog(formData);
-    if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: `"${artistName}" has been removed.` });
-    }
+    await onFormSubmit(removeArtistFromCatalog, formData, `"${artistName}" has been removed.`);
   };
 
   const handleRemoveSong = async (artistId: string, songId: string, songTitle: string) => {
     const formData = new FormData();
     formData.append('artistId', artistId);
     formData.append('songId', songId);
-    const result = await removeSongFromCatalog(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: `"${songTitle}" has been removed.` });
-    }
+    await onFormSubmit(removeSongFromCatalog, formData, `"${songTitle}" has been removed.`);
   };
 
   const handleToggleArtistAvailability = async (artist: Artist) => {
@@ -151,12 +122,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     formData.append('artistId', artist.id!);
     formData.append('isAvailable', String(artist.isAvailable));
     const successMessage = `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.`;
-    const result = await toggleArtistAvailability(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: successMessage });
-    }
+    await onFormSubmit(toggleArtistAvailability, formData, successMessage);
   };
 
   const handleToggleSongAvailability = async (artist: Artist, song: CatalogSong) => {
@@ -165,12 +131,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     formData.append('songId', song.id!);
     formData.append('isAvailable', String(song.isAvailable));
     const successMessage = `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.`;
-    const result = await toggleSongAvailability(formData);
-     if (result.error) {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    } else {
-      toast({ title: 'Success', description: successMessage });
-    }
+    await onFormSubmit(toggleSongAvailability, formData, successMessage);
   };
 
 
@@ -189,6 +150,21 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     lyricsForm.setValue('lyrics', song.lyrics || '');
     setIsLyricsDialogOpen(true);
   };
+
+  if (isLoading) {
+      return (
+          <Card>
+              <CardHeader>
+                  <Skeleton className="h-8 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+              </CardContent>
+          </Card>
+      )
+  }
 
   return (
     <Card>
@@ -218,7 +194,10 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                 )} />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isPending}>{isPending ? "Adding..." : "Add Artist"}</Button>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isPending ? "Adding..." : "Add Artist"}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -230,7 +209,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
           {artists.map((artist) => (
             <AccordionItem value={artist.id!} key={artist.id}>
               <div className="flex items-center group">
-                 <AccordionTrigger className="font-bold text-lg flex-grow">{artist.name}</AccordionTrigger>
+                 <AccordionTrigger className={cn("font-bold text-lg flex-grow", !artist.isAvailable && "text-muted-foreground line-through")}>{artist.name}</AccordionTrigger>
                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleToggleArtistAvailability(artist)} disabled={isPending}>
                         {artist.isAvailable ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -252,7 +231,9 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleRemoveArtist(artist.id!, artist.name)}>Remove</AlertDialogAction>
+                          <AlertDialogAction onClick={() => handleRemoveArtist(artist.id!, artist.name)} disabled={isPending}>
+                            {isPending ? 'Removing...' : 'Remove'}
+                          </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -260,11 +241,11 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
               </div>
               <AccordionContent>
                 <div className="space-y-2 pl-4">
-                  {artist.songs.map((song) => (
+                  {artist.songs.sort((a,b) => a.title.localeCompare(b.title)).map((song) => (
                     <div key={song.id} className={cn("flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group", !song.isAvailable && "opacity-50")}>
                       <div className="flex items-center gap-2">
                         <Music className="h-4 w-4 text-primary" />
-                        <span>{song.title}</span>
+                        <span className={cn(!song.isAvailable && "line-through")}>{song.title}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openLyricsDialog(artist, song)}>
@@ -291,7 +272,9 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleRemoveSong(artist.id!, song.id!, song.title)}>Remove</AlertDialogAction>
+                              <AlertDialogAction onClick={() => handleRemoveSong(artist.id!, song.id!, song.title)} disabled={isPending}>
+                               {isPending ? 'Removing...' : 'Remove'}
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -309,6 +292,12 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
               </AccordionContent>
             </AccordionItem>
           ))}
+           {artists.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                    <p>Your catalog is empty.</p>
+                    <p>Click "Add Artist" to start building your song list.</p>
+                </div>
+            )}
         </Accordion>
 
         <Dialog open={isSongDialogOpen} onOpenChange={setIsSongDialogOpen}>
@@ -325,7 +314,10 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                 )} />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isPending}>{isPending ? "Adding..." : "Add Song"}</Button>
+                  <Button type="submit" disabled={isPending}>
+                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isPending ? "Adding..." : "Add Song"}
+                    </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -346,7 +338,11 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                 )} />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isPending}><Save className="mr-2 h-4 w-4"/>{isPending ? "Saving..." : "Save Lyrics"}</Button>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4"/>
+                    {isPending ? "Saving..." : "Save Lyrics"}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -357,3 +353,5 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     </Card>
   );
 }
+
+    

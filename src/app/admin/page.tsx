@@ -6,10 +6,11 @@ import { Header } from '@/components/Header';
 import { AdminNowPlaying } from '@/components/admin/AdminNowPlaying';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { GroupedSong } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CatalogManagement } from '@/components/admin/CatalogManagement';
-import { Artist } from '@/lib/karaoke-catalog';
+import { useQueue } from '@/hooks/useQueue';
+import { useCatalog } from '@/hooks/useCatalog';
+
 
 function AdminLoadingSkeleton() {
   return (
@@ -21,11 +22,8 @@ function AdminLoadingSkeleton() {
 }
 
 export default function AdminPage() {
-    // Data will be fetched via hooks in a later step
-    const fullQueue: GroupedSong[] = [];
-    const artists: Artist[] = [];
-    const nowPlaying = fullQueue.find((s) => s.status === 'playing') || null;
-    const upcoming = fullQueue.filter((s) => s.status === 'queued');
+    const { nowPlaying, upcoming, isLoading: isQueueLoading } = useQueue();
+    const { artists, isLoading: isCatalogLoading } = useCatalog();
 
 
   return (
@@ -42,13 +40,15 @@ export default function AdminPage() {
               <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
             </TabsList>
             <TabsContent value="queue">
-              <div className="space-y-8">
-                <AdminNowPlaying nowPlaying={nowPlaying} />
-                <AdminQueue upcomingSongs={upcoming} />
-              </div>
+              {isQueueLoading ? <AdminLoadingSkeleton /> : (
+                <div className="space-y-8">
+                  <AdminNowPlaying nowPlaying={nowPlaying} />
+                  <AdminQueue upcomingSongs={upcoming} />
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="catalog">
-              <CatalogManagement artists={artists} />
+              <CatalogManagement artists={artists} isLoading={isCatalogLoading} />
             </TabsContent>
           </Tabs>
         </Suspense>
@@ -56,3 +56,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
