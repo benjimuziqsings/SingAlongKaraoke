@@ -1,11 +1,27 @@
+
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
-import { FirebaseProvider } from '@/firebase/provider';
+import React, { useMemo, type ReactNode, useEffect } from 'react';
+import { FirebaseProvider, useUser, useAuth } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
+import { initiateAnonymousSignIn } from './non-blocking-login';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
+}
+
+function AuthHandler({ children }: { children: ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  useEffect(() => {
+    // If the user state is done loading and there is no user, sign in anonymously.
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [isUserLoading, user, auth]);
+
+  return <>{children}</>;
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
@@ -20,7 +36,9 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       auth={firebaseServices.auth}
       firestore={firebaseServices.firestore}
     >
-      {children}
+      <AuthHandler>
+        {children}
+      </AuthHandler>
     </FirebaseProvider>
   );
 }

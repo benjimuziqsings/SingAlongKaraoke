@@ -31,10 +31,7 @@ export function useQueue(): UseQueueResult {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
     return query(
       collection(firestore, 'song_requests'),
-      where('status', 'in', ['queued', 'playing', 'finished']),
-      orderBy('status', 'asc'), // Sort by status first
-      orderBy('sortOrder', 'asc'), // Then by the assigned sortOrder
-      orderBy('createdAt', 'asc') // Finally by creation time
+      where('status', 'in', ['queued', 'playing', 'finished'])
     );
   }, [firestore, isUserLoading]);
 
@@ -75,11 +72,15 @@ export function useQueue(): UseQueueResult {
       return acc;
     }, {} as Record<string, GroupedSong>);
 
-    const queue = Object.values(groupedSongs);
+    let queue = Object.values(groupedSongs);
 
     // Filter songs into their respective categories
     const nowPlaying = queue.find(song => song.status === 'playing') || null;
-    const upcoming = queue.filter(song => song.status === 'queued');
+    
+    const upcoming = queue
+      .filter(song => song.status === 'queued')
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
     const history = queue
       .filter(song => song.status === 'finished')
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // Show most recent first

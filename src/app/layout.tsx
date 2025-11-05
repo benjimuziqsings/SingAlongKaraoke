@@ -7,8 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { FirebaseClientProvider, useUser, initiateAnonymousSignIn, useAuth } from '@/firebase';
-import { useEffect } from 'react';
+import { FirebaseClientProvider } from '@/firebase';
 
 export default function RootLayout({
   children,
@@ -16,22 +15,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const bgImage = PlaceHolderImages.find(p => p.id === 'karaoke-background');
-  
-  // This component will handle the auth logic
-  function AuthHandler({ children }: { children: React.ReactNode }) {
-    const { user, isUserLoading } = useUser();
-    const auth = useAuth();
-
-    useEffect(() => {
-      // If the user state is done loading and there is no user, sign in anonymously.
-      if (!isUserLoading && !user) {
-        initiateAnonymousSignIn(auth);
-      }
-    }, [isUserLoading, user, auth]);
-    
-    return <>{children}</>;
-  }
-
 
   return (
     <html lang="en" className="dark">
@@ -56,9 +39,7 @@ export default function RootLayout({
           />
         )}
         <FirebaseClientProvider>
-          <AuthHandler>
             <div className="flex-1">{children}</div>
-          </AuthHandler>
         </FirebaseClientProvider>
         <Toaster />
       </body>
