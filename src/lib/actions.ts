@@ -432,7 +432,7 @@ export async function toggleArtistAvailability(formData: FormData) {
     const artistRef = doc(db, 'artists', artistId);
     await updateDoc(artistRef, { isAvailable: !currentAvailability });
     revalidatePath('/admin');
-    revalidatePath('/');
+revalidatePath('/');
     return { success: true };
 }
 
