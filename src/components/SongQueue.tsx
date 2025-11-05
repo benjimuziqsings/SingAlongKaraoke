@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 type SongQueueProps = {
   songs: GroupedSong[];
