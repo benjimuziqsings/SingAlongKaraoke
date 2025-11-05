@@ -309,6 +309,7 @@ export async function addReview(formData: FormData) {
 // Catalog Management Actions
 export async function getArtists(): Promise<Artist[]> {
     if (!useFirestore) {
+      console.warn('Firestore not configured, returning empty catalog.');
       return [];
     }
     const artistsCol = collection(db, 'artists');
@@ -334,13 +335,18 @@ export async function addArtist(formData: FormData) {
     if (!useFirestore) return { error: 'Firestore is not configured.' };
     const artistName = formData.get('name') as string;
 
+    if (!artistName) {
+        return { error: 'Artist name is invalid.' };
+    }
+
     const artistsCol = collection(db, 'artists');
     const q = await getDocs(artistsCol);
     const artistExists = q.docs.some(doc => doc.data().name.toLowerCase() === artistName.toLowerCase());
 
-    if (!artistName || artistExists) {
-        return { error: 'Artist already exists or name is invalid.' };
+    if (artistExists) {
+        return { error: 'Artist already exists.' };
     }
+
     await addDoc(artistsCol, { name: artistName, isAvailable: true });
     revalidatePath('/admin');
     return { success: true };
@@ -392,7 +398,6 @@ export async function removeArtistFromCatalog(formData: FormData) {
     }
     const artistRef = doc(db, 'artists', artistId);
     
-    // Also delete all songs in the subcollection
     const songsCol = collection(db, 'artists', artistId, 'songs');
     const songSnapshot = await getDocs(songsCol);
     const batch = writeBatch(db);
