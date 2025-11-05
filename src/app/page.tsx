@@ -1,3 +1,4 @@
+
 import { getNowPlaying, getQueue, getSongHistory } from '@/lib/actions';
 import { Header } from '@/components/Header';
 import { NowPlaying } from '@/components/NowPlaying';
@@ -7,6 +8,7 @@ import { TippingDialog } from '@/components/TippingDialog';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { ReviewDialog } from '@/components/ReviewDialog';
 
 function QueueLoadingSkeleton() {
   return (
@@ -32,8 +34,9 @@ export default function Home() {
         </Suspense>
       </main>
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border p-4 z-10">
-        <div className="container mx-auto max-w-3xl flex justify-center gap-4">
+        <div className="container mx-auto max-w-3xl grid grid-cols-2 lg:grid-cols-3 gap-4">
           <SongRequestDialog />
+          <ReviewDialog />
           <TippingDialog />
         </div>
       </footer>
@@ -49,7 +52,7 @@ async function PatronView() {
   return (
     <div className="space-y-8">
       <NowPlaying song={nowPlaying} />
-      <SongQueue songs={queue} />
+      <SongQueue songs={queue} title="Up Next" />
       {history.length > 0 && (
         <>
           <Separator className="my-12" />

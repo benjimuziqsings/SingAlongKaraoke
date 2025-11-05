@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { songQueue } from './data';
-import type { GroupedSong, Song } from './types';
+import { songQueue, reviews } from './data';
+import type { GroupedSong, Song, Review } from './types';
 
 function groupSongs(songs: Song[]): GroupedSong[] {
   const songGroups: Map<string, GroupedSong> = new Map();
@@ -144,4 +144,27 @@ export async function removeSong(songId: string) {
 
   revalidatePath('/');
   revalidatePath('/admin');
+}
+
+// Review actions
+export async function getReviews(): Promise<Review[]> {
+    return reviews.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function addReview(formData: FormData) {
+  const newReview: Review = {
+    id: crypto.randomUUID(),
+    name: formData.get('name') as string,
+    rating: parseInt(formData.get('rating') as string, 10),
+    comment: formData.get('comment') as string,
+    createdAt: Date.now(),
+  };
+
+  if (!newReview.name || !newReview.rating || !newReview.comment) {
+    return { error: 'Please fill out all required fields.' };
+  }
+
+  reviews.push(newReview);
+  revalidatePath('/reviews');
+  return { review: newReview };
 }

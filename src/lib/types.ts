@@ -24,3 +24,11 @@ export type GroupedSong = {
   createdAt: number;
   id: string;
 };
+
+export type Review = {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  createdAt: number;
+};

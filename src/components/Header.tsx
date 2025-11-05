@@ -1,5 +1,6 @@
+
 import Link from 'next/link';
-import { Mic, UserCog, Users } from 'lucide-react';
+import { Mic, UserCog, Users, MessageSquareText } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -14,7 +15,13 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
             Karaoke Queue Master
           </h1>
         </Link>
-        <nav>
+        <nav className="flex items-center gap-2">
+           <Button asChild variant="ghost" size="sm">
+              <Link href="/reviews">
+                <MessageSquareText className="mr-2 h-4 w-4" />
+                Reviews
+              </Link>
+            </Button>
           <Button asChild variant="ghost" size="sm">
             {isAdmin ? (
               <Link href="/">
