@@ -3,7 +3,7 @@
 
 import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
-import { removeSong, setNowPlaying, toggleLockSong } from '@/lib/actions';
+import { removeSong, setNowPlaying, toggleLockSong, moveSongUp, moveSongDown } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock, MessageSquare } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock, MessageSquare, ArrowUp, ArrowDown } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
@@ -64,6 +64,18 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
         title: `Song ${song.isLocked ? 'Unlocked' : 'Locked'}`,
         description: `"${song.title}" has been ${song.isLocked ? 'unlocked' : 'locked'}.`,
       });
+    });
+  };
+  
+  const handleMoveUp = (song: GroupedSong) => {
+    startTransition(async () => {
+      await moveSongUp(song.id);
+    });
+  };
+
+  const handleMoveDown = (song: GroupedSong) => {
+    startTransition(async () => {
+      await moveSongDown(song.id);
     });
   };
 
@@ -130,7 +142,27 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
                         </PopoverContent>
                       </Popover>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-right space-x-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => handleMoveUp(song)}
+                      disabled={isPending || index === 0}
+                      aria-label="Move Up"
+                    >
+                      <ArrowUp className="h-5 w-5" />
+                    </Button>
+                     <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => handleMoveDown(song)}
+                      disabled={isPending || index === upcomingSongs.length - 1}
+                      aria-label="Move Down"
+                    >
+                      <ArrowDown className="h-5 w-5" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"

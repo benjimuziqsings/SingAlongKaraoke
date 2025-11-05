@@ -199,6 +199,78 @@ export async function toggleLockSong(songId: string) {
     revalidatePath('/'); // To update catalog
 }
 
+export async function moveSongUp(songId: string) {
+  const queuedSongs = songQueue
+    .filter(s => s.status === 'queued')
+    .sort((a, b) => a.createdAt - b.createdAt);
+  
+  const songToMove = songQueue.find(s => s.id === songId);
+  if (!songToMove) return;
+
+  const groupedSongs = groupSongs(queuedSongs);
+  const songIndex = groupedSongs.findIndex(g => g.title === songToMove.title && g.artist === songToMove.artist);
+  
+  if (songIndex > 0) {
+    const prevSongGroup = groupedSongs[songIndex - 1];
+    
+    // Swap createdAt timestamps
+    const songToMoveTimestamp = songToMove.createdAt;
+    
+    // Update all songs in the group being moved
+    songQueue.forEach(s => {
+      if (s.title === songToMove.title && s.artist === songToMove.artist) {
+        s.createdAt = prevSongGroup.createdAt;
+      }
+    });
+
+    // Update all songs in the group being swapped with
+    songQueue.forEach(s => {
+      if (s.title === prevSongGroup.title && s.artist === prevSongGroup.artist) {
+        s.createdAt = songToMoveTimestamp;
+      }
+    });
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+}
+
+export async function moveSongDown(songId: string) {
+  const queuedSongs = songQueue
+    .filter(s => s.status === 'queued')
+    .sort((a, b) => a.createdAt - b.createdAt);
+  
+  const songToMove = songQueue.find(s => s.id === songId);
+  if (!songToMove) return;
+
+  const groupedSongs = groupSongs(queuedSongs);
+  const songIndex = groupedSongs.findIndex(g => g.title === songToMove.title && g.artist === songToMove.artist);
+
+  if (songIndex < groupedSongs.length - 1 && songIndex !== -1) {
+    const nextSongGroup = groupedSongs[songIndex + 1];
+
+    // Swap createdAt timestamps
+    const songToMoveTimestamp = songToMove.createdAt;
+
+    // Update all songs in the group being moved
+    songQueue.forEach(s => {
+      if (s.title === songToMove.title && s.artist === songToMove.artist) {
+        s.createdAt = nextSongGroup.createdAt;
+      }
+    });
+
+    // Update all songs in the group being swapped with
+    songQueue.forEach(s => {
+      if (s.title === nextSongGroup.title && s.artist === nextSongGroup.artist) {
+        s.createdAt = songToMoveTimestamp;
+      }
+    });
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+}
+
 
 // Review actions
 export async function getReviews(): Promise<Review[]> {
@@ -325,6 +397,6 @@ export async function toggleSongAvailability(formData: FormData) {
     }
     song.isAvailable = song.isAvailable === false; // Toggle
     revalidatePath('/admin');
-    revalidatePath('/');
+revalidatePath('/');
     return { success: true };
 }
