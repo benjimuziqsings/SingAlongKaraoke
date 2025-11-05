@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
  */
@@ -26,12 +27,12 @@ service cloud.firestore {
       allow read, write: if isOwner(patronId);
     }
     
-    // Any signed-in user can read the global song queue.
-    // Users can only create requests for themselves.
+    // The song queue can be read by anyone.
+    // Signed-in users (including anonymous) can create requests.
     // Users can only update/delete their own requests.
     match /song_requests/{songRequestId} {
-        allow read: if isSignedIn();
-        allow create: if isOwner(request.resource.data.patronId);
+        allow read: if true;
+        allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
         allow update, delete: if isOwner(resource.data.patronId);
     }
 
