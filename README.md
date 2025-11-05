@@ -1,4 +1,4 @@
-# Karaoke Queue Master
+# Sing A Long Karaoke
 
 This is a NextJS starter in Firebase Studio.
 

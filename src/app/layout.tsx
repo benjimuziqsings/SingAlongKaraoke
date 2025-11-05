@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export const metadata: Metadata = {
-  title: 'Karaoke Queue Master',
+  title: 'Sing A Long Karaoke',
   description: 'Real-time karaoke song requests and queue management.',
 };
 

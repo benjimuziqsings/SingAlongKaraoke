@@ -12,7 +12,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
             <Mic className="text-primary h-6 w-6" />
           </div>
           <h1 className="font-headline text-xl md:text-2xl whitespace-nowrap">
-            Karaoke Queue Master
+            Sing A Long Karaoke
           </h1>
         </Link>
         <nav className="flex items-center gap-2">
