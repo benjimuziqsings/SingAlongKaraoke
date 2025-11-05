@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addSong } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { karaokeCatalog, Artist } from '@/lib/karaoke-catalog';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,10 +30,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Music, PlusCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const songRequestSchema = z.object({
-  title: z.string().min(1, { message: 'Song title is required.' }),
-  artist: z.string().min(1, { message: 'Artist name is required.' }),
+  artist: z.string({ required_error: 'Please select an artist.' }),
+  title: z.string({ required_error: 'Please select a song.' }),
   singer: z.string().min(1, { message: 'Your name is required.' }),
   announcement: z.string().optional(),
 });
@@ -40,15 +48,28 @@ const songRequestSchema = z.object({
 export function SongRequestDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const [artists] = useState<Artist[]>(karaokeCatalog);
+  const [songs, setSongs] = useState<{ title: string }[]>([]);
+
   const form = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),
     defaultValues: {
-      title: '',
-      artist: '',
       singer: '',
       announcement: '',
     },
   });
+
+  const selectedArtist = form.watch('artist');
+
+  useEffect(() => {
+    if (selectedArtist) {
+      const artistData = artists.find(a => a.name === selectedArtist);
+      setSongs(artistData?.songs || []);
+      form.resetField('title');
+    } else {
+      setSongs([]);
+    }
+  }, [selectedArtist, artists, form]);
 
   async function onSubmit(values: z.infer<typeof songRequestSchema>) {
     const formData = new FormData();
@@ -96,28 +117,50 @@ export function SongRequestDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Song Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Don't Stop Believin'" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+             <FormField
               control={form.control}
               name="artist"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Artist Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Journey" {...field} />
-                  </FormControl>
+                  <FormLabel>Artist</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an artist" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {artists.map(artist => (
+                        <SelectItem key={artist.name} value={artist.name}>
+                          {artist.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Song</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedArtist}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a song" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {songs.map(song => (
+                        <SelectItem key={song.title} value={song.title}>
+                          {song.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
