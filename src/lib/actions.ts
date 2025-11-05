@@ -72,9 +72,9 @@ export async function getFullQueue() {
 export async function addSong(formData: FormData) {
   const newSong: Song = {
     id: crypto.randomUUID(),
+    singer: formData.get('singer') as string,
     title: formData.get('title') as string,
     artist: formData.get('artist') as string,
-    singer: formData.get('singer') as string,
     announcement: formData.get('announcement') as string | undefined,
     status: 'queued',
     createdAt: Date.now(),

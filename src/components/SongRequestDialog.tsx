@@ -39,9 +39,9 @@ import {
 } from '@/components/ui/select';
 
 const songRequestSchema = z.object({
+  singer: z.string().min(1, { message: 'Your name is required.' }),
   artist: z.string({ required_error: 'Please select an artist.' }),
   title: z.string({ required_error: 'Please select a song.' }),
-  singer: z.string().min(1, { message: 'Your name is required.' }),
   announcement: z.string().optional(),
 });
 
@@ -117,6 +117,19 @@ export function SongRequestDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="singer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Name (for the KJ)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., John D." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
              <FormField
               control={form.control}
               name="artist"
@@ -161,19 +174,6 @@ export function SongRequestDialog() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="singer"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Your Name (for the KJ)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., John D." {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
