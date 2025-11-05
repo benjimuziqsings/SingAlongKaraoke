@@ -228,7 +228,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
           {artists.map((artist) => (
-            <AccordionItem value={artist.id!} key={artist.id} className={cn(!artist.isAvailable && "opacity-50")}>
+            <AccordionItem value={artist.id!} key={artist.id}>
               <div className="flex items-center group">
                  <AccordionTrigger className="font-bold text-lg flex-grow">{artist.name}</AccordionTrigger>
                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
