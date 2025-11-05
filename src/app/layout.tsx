@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Sing A Long Karaoke',
@@ -36,7 +37,9 @@ export default function RootLayout({
             data-ai-hint={bgImage.imageHint}
           />
         )}
-        <div className="flex-1">{children}</div>
+        <FirebaseClientProvider>
+          <div className="flex-1">{children}</div>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
