@@ -1,28 +1,3 @@
 {
-    "artists": [
-        {
-            "name": "Queen",
-            "isAvailable": true
-        },
-        {
-            "name": "Bon Jovi",
-            "isAvailable": true
-        },
-        {
-            "name": "Journey",
-            "isAvailable": true
-        },
-        {
-            "name": "Gloria Gaynor",
-            "isAvailable": true
-        },
-        {
-            "name": "Britney Spears",
-            "isAvailable": true
-        },
-        {
-            "name": "ABBA",
-            "isAvailable": true
-        }
-    ]
+    "artists": []
 }
