@@ -65,8 +65,11 @@ export function SongRequestDialog() {
     if (isOpen) {
       const fetchAndFilter = async () => {
         const lockedSongs = await getLockedSongs();
-        const availableArtists = karaokeCatalog.map(artist => {
+        const availableArtists = karaokeCatalog
+          .filter(artist => artist.isAvailable !== false)
+          .map(artist => {
             const availableSongs = artist.songs.filter(song => 
+                song.isAvailable !== false &&
                 !lockedSongs.some(locked => locked.title === song.title && locked.artist === artist.name)
             );
             return { ...artist, songs: availableSongs };

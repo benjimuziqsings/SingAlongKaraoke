@@ -7,16 +7,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Artist } from '@/lib/karaoke-catalog';
-import { addArtist, addSongToCatalog, updateLyrics, removeArtistFromCatalog, removeSongFromCatalog } from '@/lib/actions';
+import { addArtist, addSongToCatalog, updateLyrics, removeArtistFromCatalog, removeSongFromCatalog, toggleArtistAvailability, toggleSongAvailability } from '@/lib/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 
 const artistSchema = z.object({
@@ -76,7 +77,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     formData.append('name', values.name);
     await onFormSubmit(addArtist, formData, `"${values.name}" has been added.`);
     // Optimistic update
-    setArtists(prev => [...prev, { name: values.name, songs: [] }].sort((a, b) => a.name.localeCompare(b.name)));
+    setArtists(prev => [...prev, { name: values.name, songs: [], isAvailable: true }].sort((a, b) => a.name.localeCompare(b.name)));
     artistForm.reset();
     setIsArtistDialogOpen(false);
   };
@@ -86,7 +87,7 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     formData.append('artistName', values.artistName);
     formData.append('title', values.title);
     await onFormSubmit(addSongToCatalog, formData, `"${values.title}" added for ${values.artistName}.`);
-    setArtists(prev => prev.map(a => a.name === values.artistName ? { ...a, songs: [...a.songs, { title: values.title }].sort((s1,s2) => s1.title.localeCompare(s2.title)) } : a));
+    setArtists(prev => prev.map(a => a.name === values.artistName ? { ...a, songs: [...a.songs, { title: values.title, isAvailable: true }].sort((s1,s2) => s1.title.localeCompare(s2.title)) } : a));
     songForm.reset();
     setIsSongDialogOpen(false);
   };
@@ -117,6 +118,25 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
     setArtists(prev => prev.map(a => a.name === artistName ? { ...a, songs: a.songs.filter(s => s.title !== title) } : a));
   };
 
+  const handleToggleArtistAvailability = async (artistName: string) => {
+    const formData = new FormData();
+    formData.append('artistName', artistName);
+    const artist = artists.find(a => a.name === artistName);
+    const successMessage = `"${artistName}" is now ${artist?.isAvailable === false ? 'available' : 'unavailable'}.`;
+    await onFormSubmit(toggleArtistAvailability, formData, successMessage);
+    setArtists(prev => prev.map(a => a.name === artistName ? { ...a, isAvailable: a.isAvailable === false } : a));
+  };
+
+  const handleToggleSongAvailability = async (artistName: string, title: string) => {
+    const formData = new FormData();
+    formData.append('artistName', artistName);
+    formData.append('title', title);
+    const artist = artists.find(a => a.name === artistName);
+    const song = artist?.songs.find(s => s.title === title);
+    const successMessage = `"${title}" is now ${song?.isAvailable === false ? 'available' : 'unavailable'}.`;
+    await onFormSubmit(toggleSongAvailability, formData, successMessage);
+    setArtists(prev => prev.map(a => a.name === artistName ? { ...a, songs: a.songs.map(s => s.title === title ? { ...s, isAvailable: s.isAvailable === false } : s) } : a));
+  };
 
   const openSongDialog = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -171,34 +191,40 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
           {artists.map((artist) => (
-            <AccordionItem value={artist.name} key={artist.name}>
+            <AccordionItem value={artist.name} key={artist.name} className={cn(!artist.isAvailable && "opacity-50")}>
               <div className="flex items-center group">
                  <AccordionTrigger className="font-bold text-lg flex-grow">{artist.name}</AccordionTrigger>
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remove Artist</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently remove "{artist.name}" and all their songs from the catalog. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleRemoveArtist(artist.name)}>Remove</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleToggleArtistAvailability(artist.name)}>
+                        {artist.isAvailable !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        <span className="sr-only">Toggle Artist Availability</span>
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remove Artist</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently remove "{artist.name}" and all their songs from the catalog. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleRemoveArtist(artist.name)}>Remove</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                 </div>
               </div>
               <AccordionContent>
                 <div className="space-y-2 pl-4">
                   {artist.songs.map((song) => (
-                    <div key={song.title} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group">
+                    <div key={song.title} className={cn("flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group", !song.isAvailable && "opacity-50")}>
                       <div className="flex items-center gap-2">
                         <Music className="h-4 w-4 text-primary" />
                         <span>{song.title}</span>
@@ -207,6 +233,10 @@ export function CatalogManagement({ artists: initialArtists }: CatalogManagement
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openLyricsDialog(artist, song)}>
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit Lyrics</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleToggleSongAvailability(artist.name, song.title)}>
+                            {song.isAvailable !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            <span className="sr-only">Toggle Song Availability</span>
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>

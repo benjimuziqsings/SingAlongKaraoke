@@ -82,6 +82,23 @@ export async function getLockedSongs() {
       locked.add(`${s.title}|${s.artist}`);
     }
   });
+  
+  karaokeCatalog.forEach(artist => {
+    if (artist.isAvailable === false) {
+        // if artist is unavailable, all their songs are unavailable
+        artist.songs.forEach(song => {
+            locked.add(`${song.title}|${artist.name}`);
+        });
+    } else {
+        artist.songs.forEach(song => {
+            if (song.isAvailable === false) {
+                locked.add(`${song.title}|${artist.name}`);
+            }
+        });
+    }
+  });
+
+
   return Array.from(locked).map(l => {
     const [title, artist] = l.split('|');
     return { title, artist };
@@ -213,7 +230,7 @@ export async function addArtist(formData: FormData) {
     if (!artistName || karaokeCatalog.some(a => a.name.toLowerCase() === artistName.toLowerCase())) {
         return { error: 'Artist already exists or name is invalid.' };
     }
-    karaokeCatalog.push({ name: artistName, songs: [] });
+    karaokeCatalog.push({ name: artistName, songs: [], isAvailable: true });
     karaokeCatalog.sort((a, b) => a.name.localeCompare(b.name));
     revalidatePath('/admin');
     return { success: true };
@@ -229,7 +246,7 @@ export async function addSongToCatalog(formData: FormData) {
     if (artist.songs.some(s => s.title.toLowerCase() === title.toLowerCase())) {
         return { error: 'Song already exists for this artist.' };
     }
-    artist.songs.push({ title });
+    artist.songs.push({ title, isAvailable: true });
     artist.songs.sort((a, b) => a.title.localeCompare(b.title));
     revalidatePath('/admin');
     revalidatePath('/');
@@ -278,6 +295,35 @@ export async function removeSongFromCatalog(formData: FormData) {
         return { error: 'Song not found.' };
     }
     artist.songs.splice(songIndex, 1);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+}
+
+export async function toggleArtistAvailability(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const artist = karaokeCatalog.find(a => a.name === artistName);
+    if (!artist) {
+        return { error: 'Artist not found.' };
+    }
+    artist.isAvailable = artist.isAvailable === false; // Toggle
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+}
+
+export async function toggleSongAvailability(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const title = formData.get('title') as string;
+    const artist = karaokeCatalog.find(a => a.name === artistName);
+    if (!artist) {
+        return { error: 'Artist not found.' };
+    }
+    const song = artist.songs.find(s => s.title === title);
+    if (!song) {
+        return { error: 'Song not found.' };
+    }
+    song.isAvailable = song.isAvailable === false; // Toggle
     revalidatePath('/admin');
     revalidatePath('/');
     return { success: true };
