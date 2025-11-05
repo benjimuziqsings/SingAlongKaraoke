@@ -1,7 +1,7 @@
 'use client';
-import type { Song } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ListMusic, User, MessageSquare } from 'lucide-react';
+import type { GroupedSong } from '@/lib/types';
+import { Card, CardContent } from './ui/card';
+import { ListMusic, User, MessageSquare, Users } from 'lucide-react';
 import { EmptyQueue } from './EmptyQueue';
 import {
   Popover,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/popover';
 
 type SongQueueProps = {
-  songs: Song[];
+  songs: GroupedSong[];
 };
 
 export function SongQueue({ songs }: SongQueueProps) {
@@ -31,20 +31,36 @@ export function SongQueue({ songs }: SongQueueProps) {
                     <p className="font-bold text-lg">{song.title}</p>
                     <p className="text-sm text-muted-foreground">{song.artist}</p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground pr-2">
-                    <User className="h-4 w-4" />
-                    <span>{song.singer}</span>
-                     {song.announcement && (
-                      <Popover>
-                        <PopoverTrigger>
-                          <MessageSquare className="h-4 w-4 text-accent/80 cursor-pointer hover:text-accent" />
-                        </PopoverTrigger>
-                        <PopoverContent>
-                          <p className="text-sm italic">"{song.announcement}"</p>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground pr-2 cursor-pointer">
+                        <Users className="h-4 w-4" />
+                        <span>{song.requesters.length} request{song.requesters.length > 1 ? 's' : ''}</span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto">
+                       <h4 className="font-bold mb-2 text-sm">Requested By</h4>
+                        <ul className="space-y-1">
+                          {song.requesters.map((r, i) => (
+                            <li key={i} className="text-xs flex items-center gap-2">
+                              <span>{r.singer}</span>
+                              {r.announcement && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <MessageSquare className="h-3 w-3 text-accent/80"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs italic">"{r.announcement}"</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                    </PopoverContent>
+                  </Popover>
                 </CardContent>
               </Card>
             </li>

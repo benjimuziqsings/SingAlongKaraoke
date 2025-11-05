@@ -1,7 +1,7 @@
 'use client';
-import type { Song } from '@/lib/types';
+import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Mic2, Music, User, MessageSquare } from 'lucide-react';
+import { Mic2, Music, User, MessageSquare, Users } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -9,10 +9,12 @@ import {
 } from '@/components/ui/popover';
 
 type NowPlayingProps = {
-  song: Song | null;
+  song: GroupedSong | null;
 };
 
 export function NowPlaying({ song }: NowPlayingProps) {
+  const hasAnnouncements = song?.requesters.some(r => r.announcement);
+
   return (
     <section aria-labelledby="now-playing-title">
       <Card className="bg-primary/10 border-primary/50 shadow-lg shadow-primary/10 overflow-hidden">
@@ -34,18 +36,44 @@ export function NowPlaying({ song }: NowPlayingProps) {
                   {song.artist}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <p className="text-lg text-foreground flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Requested by <span className="font-bold text-accent">{song.singer}</span>
-                </p>
-                {song.announcement && (
-                  <Popover>
-                    <PopoverTrigger>
-                      <MessageSquare className="h-5 w-5 text-accent/80 cursor-pointer hover:text-accent" />
+              <div className="flex items-center gap-4">
+                 <Popover>
+                    <PopoverTrigger asChild>
+                       <p className="text-lg text-foreground flex items-center gap-2 cursor-pointer">
+                        <Users className="h-5 w-5" />
+                        Requested by <span className="font-bold text-accent">{song.requesters.length} singer{song.requesters.length > 1 ? 's' : ''}</span>
+                      </p>
                     </PopoverTrigger>
                     <PopoverContent>
-                      <p className="text-sm italic">"{song.announcement}"</p>
+                       <h4 className="font-bold mb-2">Requesters</h4>
+                      <ul className="space-y-1 text-sm">
+                        {song.requesters.map((requester, idx) => (
+                           <li key={idx} className="flex items-center justify-between">
+                            <span>{requester.singer}</span>
+                            {requester.announcement && <MessageSquare className="h-4 w-4 text-accent/80" />}
+                           </li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
+
+                {hasAnnouncements && (
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="flex items-center gap-1 text-accent/80 cursor-pointer hover:text-accent">
+                        <MessageSquare className="h-5 w-5" />
+                        <span className="text-sm">Notes</span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                       <h4 className="font-bold mb-2">Special Announcements</h4>
+                       <ul className="space-y-2">
+                        {song.requesters.filter(r => r.announcement).map((requester, idx) => (
+                          <li key={idx} className="text-sm">
+                            <span className="font-semibold">{requester.singer}:</span> "{requester.announcement}"
+                          </li>
+                        ))}
+                      </ul>
                     </PopoverContent>
                   </Popover>
                 )}

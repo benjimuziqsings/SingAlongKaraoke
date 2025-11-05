@@ -4,8 +4,8 @@ import { Header } from '@/components/Header';
 import { AdminNowPlaying } from '@/components/admin/AdminNowPlaying';
 import { QRCodePlaceholder } from '@/components/admin/QRCodePlaceholder';
 import { Suspense } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GroupedSong } from '@/lib/types';
 
 function AdminLoadingSkeleton() {
   return (
@@ -38,7 +38,7 @@ export default function AdminPage() {
 }
 
 async function AdminView() {
-    const fullQueue = await getFullQueue();
+    const fullQueue: GroupedSong[] = await getFullQueue();
     const nowPlaying = fullQueue.find((s) => s.status === 'playing') || null;
     const upcoming = fullQueue.filter((s) => s.status === 'queued');
 

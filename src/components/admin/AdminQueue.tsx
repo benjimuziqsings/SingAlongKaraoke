@@ -1,7 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import type { Song } from '@/lib/types';
+import type { GroupedSong } from '@/lib/types';
 import { removeSong, setNowPlaying } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,19 +15,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, User, Music, MessageSquare } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 type AdminQueueProps = {
-  upcomingSongs: Song[];
+  upcomingSongs: GroupedSong[];
 };
 
 export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const handlePlayNext = (song: Song) => {
+  const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
       await setNowPlaying(song.id);
       toast({
@@ -37,7 +37,7 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
     });
   };
 
-  const handleRemove = (song: Song) => {
+  const handleRemove = (song: GroupedSong) => {
     startTransition(async () => {
       await removeSong(song.id);
       toast({
@@ -62,9 +62,8 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">#</TableHead>
-                <TableHead><User className="h-4 w-4 inline-block mr-1"/>Requester</TableHead>
                 <TableHead><Music className="h-4 w-4 inline-block mr-1"/>Song</TableHead>
-                <TableHead>Note</TableHead>
+                <TableHead><Users className="h-4 w-4 inline-block mr-1"/>Requesters</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -72,24 +71,30 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
               {upcomingSongs.map((song, index) => (
                 <TableRow key={song.id} className="group">
                   <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell>{song.singer}</TableCell>
                   <TableCell>
                     <div className="font-medium">{song.title}</div>
                     <div className="text-sm text-muted-foreground">{song.artist}</div>
                   </TableCell>
                   <TableCell>
-                     {song.announcement && (
-                      <Popover>
+                     <Popover>
                         <PopoverTrigger asChild>
-                           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
-                            <MessageSquare className="h-5 w-5" />
+                           <Button variant="ghost" size="sm">
+                            <Users className="h-4 w-4 mr-2" />
+                            {song.requesters.length}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent>
-                          <p className="text-sm italic">"{song.announcement}"</p>
+                          <h4 className="font-bold mb-2">Requesters</h4>
+                          <ul className="space-y-2 text-sm">
+                            {song.requesters.map((r, i) => (
+                              <li key={i}>
+                                <p className="font-semibold">{r.singer}</p>
+                                {r.announcement && <p className="text-xs italic text-muted-foreground">"{r.announcement}"</p>}
+                              </li>
+                            ))}
+                          </ul>
                         </PopoverContent>
                       </Popover>
-                    )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button

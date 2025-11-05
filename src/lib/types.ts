@@ -1,3 +1,9 @@
+
+export type RequesterInfo = {
+  singer: string;
+  announcement?: string;
+};
+
 export type Song = {
   id: string;
   title: string;
@@ -6,4 +12,13 @@ export type Song = {
   announcement?: string;
   status: 'queued' | 'playing' | 'finished';
   createdAt: number;
+};
+
+export type GroupedSong = {
+  title: string;
+  artist: string;
+  requesters: RequesterInfo[];
+  status: 'queued' | 'playing';
+  createdAt: number;
+  id: string;
 };
