@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTransition } from 'react';
@@ -5,7 +6,6 @@ import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Mic2, Music, Users, MessageSquare } from 'lucide-react';
-import { finishSong } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   Popover,
@@ -18,6 +18,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
   } from '@/components/ui/tooltip';
+import { useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 type AdminNowPlayingProps = {
   nowPlaying: GroupedSong | null;
@@ -26,11 +30,13 @@ type AdminNowPlayingProps = {
 export function AdminNowPlaying({ nowPlaying }: AdminNowPlayingProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handleFinishSong = () => {
     if (!nowPlaying) return;
-    startTransition(async () => {
-      await finishSong(nowPlaying.id);
+    startTransition(() => {
+      const songRef = doc(firestore, 'song_requests', nowPlaying.id);
+      updateDocumentNonBlocking(songRef, { status: 'finished' });
       toast({
         title: 'Song Finished',
         description: `"${nowPlaying.title}" has been marked as finished.`,

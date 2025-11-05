@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Artist, CatalogSong } from '@/lib/karaoke-catalog';
-import { addArtist, addSongToCatalog, updateLyrics, removeArtistFromCatalog, removeSongFromCatalog, toggleArtistAvailability, toggleSongAvailability } from '@/lib/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +18,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
+import { useFirestore } from '@/firebase';
+import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const artistSchema = z.object({
@@ -44,6 +46,7 @@ type CatalogManagementProps = {
 
 export function CatalogManagement({ artists, isLoading }: CatalogManagementProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);
   const [isSongDialogOpen, setIsSongDialogOpen] = useState(false);
   const [isLyricsDialogOpen, setIsLyricsDialogOpen] = useState(false);
@@ -66,72 +69,89 @@ export function CatalogManagement({ artists, isLoading }: CatalogManagementProps
     defaultValues: { artistId: '', songId: '', title: '', lyrics: '' },
   });
 
-  const onFormSubmit = async (action: (formData: FormData) => Promise<any>, formData: FormData, successMessage: string) => {
-    startTransition(async () => {
-      const result = await action(formData);
-      if (result?.error) {
-        toast({ variant: 'destructive', title: 'Error', description: result.error });
-      } else {
-        toast({ title: 'Success', description: successMessage });
-      }
+  const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
+    startTransition(() => {
+      const artistsCol = collection(firestore, 'artists');
+      addDocumentNonBlocking(artistsCol, {
+        name: values.name,
+        isAvailable: true,
+      });
+      toast({ title: 'Success', description: `"${values.name}" has been added.` });
+      artistForm.reset();
+      setIsArtistDialogOpen(false);
     });
   };
 
-  const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
-    const formData = new FormData();
-    formData.append('name', values.name);
-    await onFormSubmit(addArtist, formData, `"${values.name}" has been added.`);
-    artistForm.reset();
-    setIsArtistDialogOpen(false);
-  };
-
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
-    const formData = new FormData();
-    formData.append('artistId', values.artistId);
-    formData.append('title', values.title);
-    await onFormSubmit(addSongToCatalog, formData, `"${values.title}" added for ${selectedArtist?.name}.`);
-    songForm.reset();
-    setIsSongDialogOpen(false);
+    startTransition(() => {
+      const songsCol = collection(firestore, 'artists', values.artistId, 'songs');
+      addDocumentNonBlocking(songsCol, {
+        title: values.title,
+        isAvailable: true,
+        lyrics: '',
+      });
+      toast({ title: 'Success', description: `"${values.title}" added for ${selectedArtist?.name}.` });
+      songForm.reset();
+      setIsSongDialogOpen(false);
+    });
   };
 
   const handleUpdateLyrics = async (values: z.infer<typeof lyricsSchema>) => {
-    const formData = new FormData();
-    formData.append('artistId', values.artistId);
-    formData.append('songId', values.songId);
-    formData.append('lyrics', values.lyrics);
-    await onFormSubmit(updateLyrics, formData, `Lyrics for "${values.title}" updated.`);
-    lyricsForm.reset();
-    setIsLyricsDialogOpen(false);
+    startTransition(() => {
+      const songRef = doc(firestore, 'artists', values.artistId, 'songs', values.songId);
+      updateDocumentNonBlocking(songRef, { lyrics: values.lyrics });
+      toast({ title: 'Success', description: `Lyrics for "${values.title}" updated.` });
+      lyricsForm.reset();
+      setIsLyricsDialogOpen(false);
+    });
   };
   
   const handleRemoveArtist = async (artistId: string, artistName: string) => {
-    const formData = new FormData();
-    formData.append('artistId', artistId);
-    await onFormSubmit(removeArtistFromCatalog, formData, `"${artistName}" has been removed.`);
+    startTransition(async () => {
+      const artistRef = doc(firestore, 'artists', artistId);
+      const songsColRef = collection(firestore, 'artists', artistId, 'songs');
+      
+      const batch = writeBatch(firestore);
+      
+      // Delete all songs in the subcollection
+      const songsSnapshot = await getDocs(songsColRef);
+      songsSnapshot.forEach(songDoc => {
+        batch.delete(songDoc.ref);
+      });
+      
+      // Delete the artist document
+      batch.delete(artistRef);
+      
+      await batch.commit();
+
+      toast({ title: 'Success', description: `"${artistName}" has been removed.` });
+    });
   };
 
   const handleRemoveSong = async (artistId: string, songId: string, songTitle: string) => {
-    const formData = new FormData();
-    formData.append('artistId', artistId);
-    formData.append('songId', songId);
-    await onFormSubmit(removeSongFromCatalog, formData, `"${songTitle}" has been removed.`);
+    startTransition(() => {
+      const songRef = doc(firestore, 'artists', artistId, 'songs', songId);
+      deleteDocumentNonBlocking(songRef);
+      toast({ title: 'Success', description: `"${songTitle}" has been removed.` });
+    });
   };
 
   const handleToggleArtistAvailability = async (artist: Artist) => {
-    const formData = new FormData();
-    formData.append('artistId', artist.id!);
-    formData.append('isAvailable', String(artist.isAvailable));
-    const successMessage = `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.`;
-    await onFormSubmit(toggleArtistAvailability, formData, successMessage);
+    startTransition(() => {
+      if (!artist.id) return;
+      const artistRef = doc(firestore, 'artists', artist.id);
+      updateDocumentNonBlocking(artistRef, { isAvailable: !artist.isAvailable });
+      toast({ title: 'Success', description: `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.` });
+    });
   };
 
   const handleToggleSongAvailability = async (artist: Artist, song: CatalogSong) => {
-    const formData = new FormData();
-    formData.append('artistId', artist.id!);
-    formData.append('songId', song.id!);
-    formData.append('isAvailable', String(song.isAvailable));
-    const successMessage = `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.`;
-    await onFormSubmit(toggleSongAvailability, formData, successMessage);
+    startTransition(() => {
+      if (!artist.id || !song.id) return;
+      const songRef = doc(firestore, 'artists', artist.id, 'songs', song.id);
+      updateDocumentNonBlocking(songRef, { isAvailable: !song.isAvailable });
+      toast({ title: 'Success', description: `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.` });
+    });
   };
 
 
@@ -353,5 +373,3 @@ export function CatalogManagement({ artists, isLoading }: CatalogManagementProps
     </Card>
   );
 }
-
-    

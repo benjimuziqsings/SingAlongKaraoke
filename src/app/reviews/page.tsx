@@ -43,8 +43,10 @@ function ReviewsList() {
     useEffect(() => {
         async function fetchReviews() {
             setIsLoading(true);
-            const fetchedReviews = await getReviews();
-            setReviews(fetchedReviews);
+            const result = await getReviews();
+            if (result.reviews) {
+              setReviews(result.reviews);
+            }
             setIsLoading(false);
         }
         fetchReviews();

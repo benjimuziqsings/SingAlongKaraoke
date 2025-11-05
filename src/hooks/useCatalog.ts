@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState, useMemo } from 'react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
 import { Artist, CatalogSong } from '@/lib/karaoke-catalog';
 
 export interface UseCatalogResult {
@@ -18,40 +18,39 @@ export function useCatalog(): UseCatalogResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const artistsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'artists');
+  }, [firestore]);
+
   useEffect(() => {
-    if (!firestore) {
+    if (!artistsQuery) {
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    const artistsCollectionRef = collection(firestore, 'artists');
 
     const unsubscribe = onSnapshot(
-      artistsCollectionRef,
+      artistsQuery,
       async (artistsSnapshot) => {
         try {
           const artistsList: Artist[] = await Promise.all(
             artistsSnapshot.docs.map(async (artistDoc) => {
               const artistData = artistDoc.data();
               const songsCollectionRef = collection(artistDoc.ref, 'songs');
+              const songsSnapshot = await getDocs(songsCollectionRef);
               
-              // We need another snapshot listener for the subcollection, but for simplicity
-              // in a hook, we will fetch it once. For fully real-time subcollections,
-              // a more complex hook structure would be needed.
-              const songsSnapshot = await new Promise<any[]>((resolve, reject) => {
-                const unsubSongs = onSnapshot(songsCollectionRef, (snap) => {
-                  const songsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                  resolve(songsData);
-                  unsubSongs(); // Unsubscribe after fetching once to avoid nested listeners in this hook
-                }, reject);
-              });
+              const songs: CatalogSong[] = songsSnapshot.docs.map(songDoc => ({
+                id: songDoc.id,
+                ...songDoc.data(),
+              }));
 
               return {
                 id: artistDoc.id,
                 name: artistData.name,
                 isAvailable: artistData.isAvailable,
-                songs: songsSnapshot as CatalogSong[],
+                songs: songs,
               };
             })
           );
@@ -76,9 +75,7 @@ export function useCatalog(): UseCatalogResult {
     );
 
     return () => unsubscribe();
-  }, [firestore]);
+  }, [artistsQuery]);
 
   return { artists, isLoading, error };
 }
-
-    

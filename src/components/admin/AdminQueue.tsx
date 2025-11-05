@@ -3,8 +3,10 @@
 
 import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
-import { removeSong, setNowPlaying, toggleLockSong, moveSongUp, moveSongDown } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { doc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -35,20 +37,44 @@ type AdminQueueProps = {
 export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
-      await setNowPlaying(song.id);
-      toast({
-        title: 'Now Playing!',
-        description: `"${song.title}" by ${song.artist} is up next.`,
-      });
+        const batch = writeBatch(firestore);
+        
+        // 1. Find the current 'playing' song and set it to 'finished'
+        const playingQuery = query(collection(firestore, 'song_requests'), where('status', '==', 'playing'));
+        const playingSnapshot = await getDocs(playingQuery);
+        playingSnapshot.forEach(doc => {
+            batch.update(doc.ref, { status: 'finished' });
+        });
+
+        // 2. Set the new song to 'playing'
+        const songRef = doc(firestore, 'song_requests', song.id);
+        batch.update(songRef, { status: 'playing' });
+
+        await batch.commit().catch(error => {
+          errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+              path: song.id,
+              operation: 'write',
+            })
+          )
+        });
+
+        toast({
+            title: 'Now Playing!',
+            description: `"${song.title}" by ${song.artist} is up next.`,
+        });
     });
   };
 
   const handleRemove = (song: GroupedSong) => {
-    startTransition(async () => {
-      await removeSong(song.id);
+    startTransition(() => {
+      const songRef = doc(firestore, 'song_requests', song.id);
+      updateDocumentNonBlocking(songRef, { status: 'removed' });
       toast({
         variant: 'destructive',
         title: 'Song Removed',
@@ -58,8 +84,9 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
   };
 
   const handleToggleLock = (song: GroupedSong) => {
-    startTransition(async () => {
-      await toggleLockSong(song.id);
+    startTransition(() => {
+      const songRef = doc(firestore, 'song_requests', song.id);
+      updateDocumentNonBlocking(songRef, { isLocked: !song.isLocked });
       toast({
         title: `Song ${song.isLocked ? 'Unlocked' : 'Locked'}`,
         description: `"${song.title}" has been ${song.isLocked ? 'unlocked' : 'locked'}.`,
@@ -67,15 +94,39 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
     });
   };
   
+  const handleMove = async (songId: string, direction: 'up' | 'down') => {
+    const currentIndex = upcomingSongs.findIndex(s => s.id === songId);
+    if (currentIndex === -1) return;
+
+    if (direction === 'up' && currentIndex === 0) return;
+    if (direction === 'down' && currentIndex === upcomingSongs.length - 1) return;
+
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    const currentSong = upcomingSongs[currentIndex];
+    const swapSong = upcomingSongs[swapIndex];
+
+    if(!currentSong.sortOrder || !swapSong.sortOrder) return;
+
+    const batch = writeBatch(firestore);
+    const currentSongRef = doc(firestore, 'song_requests', currentSong.id);
+    const swapSongRef = doc(firestore, 'song_requests', swapSong.id);
+    
+    batch.update(currentSongRef, { sortOrder: swapSong.sortOrder });
+    batch.update(swapSongRef, { sortOrder: currentSong.sortOrder });
+
+    await batch.commit();
+  }
+
   const handleMoveUp = (song: GroupedSong) => {
-    startTransition(async () => {
-      await moveSongUp(song.id);
+    startTransition(() => {
+      handleMove(song.id, 'up');
     });
   };
 
   const handleMoveDown = (song: GroupedSong) => {
-    startTransition(async () => {
-      await moveSongDown(song.id);
+    startTransition(() => {
+      handleMove(song.id, 'down');
     });
   };
 

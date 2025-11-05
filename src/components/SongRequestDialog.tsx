@@ -5,9 +5,12 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addSong, getArtists } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Artist } from '@/lib/karaoke-catalog';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useCatalog } from '@/hooks/useCatalog';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -58,26 +61,13 @@ const suggestionSchema = z.object({
 export function SongRequestDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const [artists, setArtists] = useState<Artist[]>([]);
+  const { artists: allArtists, isLoading: isCatalogLoading } = useCatalog();
   const [songs, setSongs] = useState<{ title: string }[]>([]);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    if (isOpen) {
-      const fetchAndFilter = async () => {
-        const dbArtists = await getArtists();
-        
-        const availableArtists = dbArtists
-          .filter(artist => artist.isAvailable)
-          .map(artist => {
-            const availableSongs = artist.songs.filter(song => song.isAvailable);
-            return { ...artist, songs: availableSongs };
-        }).filter(artist => artist.songs.length > 0);
-        
-        setArtists(availableArtists);
-      };
-      fetchAndFilter();
-    }
-  }, [isOpen]);
+  const artists = allArtists.filter(artist => artist.isAvailable && artist.songs.some(s => s.isAvailable));
+
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),
@@ -104,7 +94,8 @@ export function SongRequestDialog() {
   useEffect(() => {
     if (selectedArtist) {
       const artistData = artists.find(a => a.name === selectedArtist);
-      setSongs(artistData?.songs || []);
+      const availableSongs = artistData?.songs.filter(s => s.isAvailable) || [];
+      setSongs(availableSongs);
       catalogForm.resetField('title');
     } else {
       setSongs([]);
@@ -112,55 +103,63 @@ export function SongRequestDialog() {
   }, [selectedArtist, artists, catalogForm]);
 
   async function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-      if (value) {
-        formData.append(key, value);
-      }
-    });
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be signed in to make a request.' });
+      return;
+    }
+    
+    const songData = {
+        singer: values.singer,
+        artist: values.artist,
+        title: values.title,
+        announcement: values.announcement || '',
+        createdAt: Date.now(),
+        status: 'queued',
+        isLocked: false,
+        sortOrder: Date.now(),
+        patronId: user.uid,
+    };
 
-    const result = await addSong(formData);
+    const requestsCol = collection(firestore, 'song_requests');
+    addDocumentNonBlocking(requestsCol, songData);
 
-    if (result.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-    } else {
-      toast({
+    toast({
         title: 'Request Sent!',
         description: `Your request for "${values.title}" is in the queue.`,
-      });
-      catalogForm.reset();
-      setIsOpen(false);
-    }
+    });
+    catalogForm.reset();
+    setIsOpen(false);
   }
 
   async function onSuggestionSubmit(values: z.infer<typeof suggestionSchema>) {
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-      if (value) {
-        formData.append(key, String(value));
-      }
-    });
+     if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be signed in to make a suggestion.' });
+      return;
+    }
+    
     // In a real app, you'd also handle the payment flow here.
-    const result = await addSong(formData);
+    const songData = {
+        singer: values.singer,
+        artist: values.artist,
+        title: values.title,
+        announcement: values.announcement || '',
+        createdAt: Date.now(),
+        status: 'queued',
+        isLocked: false,
+        sortOrder: Date.now(),
+        patronId: user.uid,
+        tip: values.tip,
+    };
 
-    if (result.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-    } else {
-      toast({
+    const requestsCol = collection(firestore, 'song_requests');
+    addDocumentNonBlocking(requestsCol, songData);
+    
+    toast({
         title: 'Suggestion Sent!',
         description: `Your suggestion for "${values.title}" is in the queue with a $${values.tip} tip!`,
-      });
-      suggestionForm.reset();
-      setIsOpen(false);
-    }
+    });
+    suggestionForm.reset();
+    setIsOpen(false);
   }
 
   return (
@@ -211,8 +210,8 @@ export function SongRequestDialog() {
                       <FormLabel>Artist</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an artist" />
+                          <SelectTrigger disabled={isCatalogLoading}>
+                            <SelectValue placeholder={isCatalogLoading ? "Loading artists..." : "Select an artist"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
