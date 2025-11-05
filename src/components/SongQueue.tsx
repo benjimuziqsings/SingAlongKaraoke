@@ -1,32 +1,40 @@
 'use client';
 import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent } from './ui/card';
-import { ListMusic, User, MessageSquare, Users } from 'lucide-react';
+import { ListMusic, User, MessageSquare, Users, History } from 'lucide-react';
 import { EmptyQueue } from './EmptyQueue';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 type SongQueueProps = {
   songs: GroupedSong[];
+  title?: string;
+  isHistory?: boolean;
 };
 
-export function SongQueue({ songs }: SongQueueProps) {
+export function SongQueue({ songs, title = "Up Next", isHistory = false }: SongQueueProps) {
   return (
     <section aria-labelledby="queue-title">
       <h2 id="queue-title" className="font-headline text-3xl my-6 flex items-center gap-3">
-        <ListMusic className="text-primary h-7 w-7" />
-        Up Next
+        {isHistory ? <History className="text-primary h-7 w-7" /> : <ListMusic className="text-primary h-7 w-7" />}
+        {title}
       </h2>
       {songs.length > 0 ? (
         <ul className="space-y-4">
           {songs.map((song, index) => (
             <li key={song.id} className="animate-in fade-in-0 duration-500">
-              <Card className="transition-all duration-300 hover:border-primary/50 hover:bg-card/90">
+              <Card className={cn("transition-all duration-300", !isHistory && "hover:border-primary/50 hover:bg-card/90", isHistory && "opacity-60")}>
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="text-2xl font-bold text-primary w-10 text-center">{index + 1}</div>
+                  {!isHistory && <div className="text-2xl font-bold text-primary w-10 text-center">{index + 1}</div>}
                   <div className="flex-grow">
                     <p className="font-bold text-lg">{song.title}</p>
                     <p className="text-sm text-muted-foreground">{song.artist}</p>

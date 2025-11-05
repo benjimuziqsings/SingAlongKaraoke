@@ -4,13 +4,15 @@ export type RequesterInfo = {
   announcement?: string;
 };
 
+export type SongStatus = 'queued' | 'playing' | 'finished';
+
 export type Song = {
   id: string;
   title: string;
   artist: string;
   singer: string;
   announcement?: string;
-  status: 'queued' | 'playing' | 'finished';
+  status: SongStatus;
   createdAt: number;
 };
 
@@ -18,7 +20,7 @@ export type GroupedSong = {
   title: string;
   artist: string;
   requesters: RequesterInfo[];
-  status: 'queued' | 'playing';
+  status: SongStatus;
   createdAt: number;
   id: string;
 };

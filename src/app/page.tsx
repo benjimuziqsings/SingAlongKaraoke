@@ -1,4 +1,4 @@
-import { getNowPlaying, getQueue } from '@/lib/actions';
+import { getNowPlaying, getQueue, getSongHistory } from '@/lib/actions';
 import { Header } from '@/components/Header';
 import { NowPlaying } from '@/components/NowPlaying';
 import { SongQueue } from '@/components/SongQueue';
@@ -6,6 +6,7 @@ import { SongRequestDialog } from '@/components/SongRequestDialog';
 import { TippingDialog } from '@/components/TippingDialog';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 
 function QueueLoadingSkeleton() {
   return (
@@ -43,11 +44,18 @@ export default function Home() {
 async function PatronView() {
   const nowPlaying = await getNowPlaying();
   const queue = await getQueue();
+  const history = await getSongHistory();
 
   return (
     <div className="space-y-8">
       <NowPlaying song={nowPlaying} />
       <SongQueue songs={queue} />
+      {history.length > 0 && (
+        <>
+          <Separator className="my-12" />
+          <SongQueue songs={history} title="Song History" isHistory />
+        </>
+      )}
     </div>
   )
 }

@@ -15,7 +15,7 @@ function groupSongs(songs: Song[]): GroupedSong[] {
         title: song.title,
         artist: song.artist,
         requesters: [],
-        status: song.status as 'queued' | 'playing',
+        status: song.status,
         createdAt: song.createdAt,
       });
     }
@@ -40,6 +40,13 @@ export async function getQueue(): Promise<GroupedSong[]> {
     .filter((s) => s.status === 'queued')
     .sort((a, b) => a.createdAt - b.createdAt);
   return groupSongs(queuedSongs);
+}
+
+export async function getSongHistory(): Promise<GroupedSong[]> {
+  const finishedSongs = songQueue
+    .filter((s) => s.status === 'finished')
+    .sort((a, b) => b.createdAt - a.createdAt);
+  return groupSongs(finishedSongs);
 }
 
 export async function getNowPlaying() {
