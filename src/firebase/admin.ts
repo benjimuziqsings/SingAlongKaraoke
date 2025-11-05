@@ -39,30 +39,31 @@ if (serviceKey) {
 }
 
 function createMockDb() {
-  const mockDoc = {
-    update: () => Promise.resolve(),
-    delete: () => Promise.resolve(),
-    collection: () => mockCollection,
-  };
+    const mockDoc = {
+        update: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+        get: () => Promise.resolve({ docs: [] }),
+        collection: (name: string) => mockCollection(name),
+    };
 
-  const mockCollection = {
-    get: () => Promise.resolve({ docs: [] }),
-    add: () => Promise.resolve(),
-    doc: () => mockDoc,
-  };
-
-  return {
-    collection: () => mockCollection,
-    doc: () => mockDoc,
-    batch: () => ({
-      delete: () => {},
-      commit: () => Promise.resolve(),
-    }),
-    writeBatch: () => ({
-      delete: () => {},
-      commit: () => Promise.resolve(),
-    }),
-  };
+    const mockCollection = (name?: string) => ({
+        get: () => Promise.resolve({ docs: [] }),
+        add: () => Promise.resolve(),
+        doc: (id?: string) => mockDoc,
+    });
+    
+    return {
+        collection: (name: string) => mockCollection(name),
+        doc: (path: string) => mockDoc,
+        batch: () => ({
+            delete: (docRef: any) => {},
+            commit: () => Promise.resolve(),
+        }),
+        writeBatch: () => ({
+            delete: (docRef: any) => {},
+            commit: () => Promise.resolve(),
+        }),
+    };
 }
 
 export { db };
