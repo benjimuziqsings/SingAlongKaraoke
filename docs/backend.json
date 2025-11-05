@@ -1,57 +1,203 @@
 {
   "entities": {
-    "artist": {
-      "title": "Artist",
-      "description": "An artist or band in the karaoke catalog.",
+    "SongRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SongRequest",
       "type": "object",
+      "description": "Represents a song request submitted by a patron.",
       "properties": {
-        "name": {
+        "id": {
           "type": "string",
-          "description": "The name of the artist."
+          "description": "Unique identifier for the song request."
         },
-        "isAvailable": {
-          "type": "boolean",
-          "description": "Whether the artist is available for requests."
+        "songTitle": {
+          "type": "string",
+          "description": "Title of the requested song."
+        },
+        "artistName": {
+          "type": "string",
+          "description": "Name of the artist for the requested song."
+        },
+        "specialAnnouncement": {
+          "type": "string",
+          "description": "Optional special announcement for the song request."
+        },
+        "requestTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the song request was submitted.",
+          "format": "date-time"
+        },
+        "patronId": {
+          "type": "string",
+          "description": "Reference to Patron. (Relationship: Patron 1:N SongRequest)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the song request such as 'pending', 'playing', 'finished', or 'removed'."
         }
       },
-      "required": ["name"]
+      "required": [
+        "id",
+        "songTitle",
+        "artistName",
+        "requestTime",
+        "patronId",
+        "status"
+      ]
     },
-    "song": {
-      "title": "Song",
-      "description": "A song in the karaoke catalog, belonging to an artist.",
+    "Patron": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Patron",
       "type": "object",
+      "description": "Represents a patron or singer using the karaoke app.",
       "properties": {
-        "title": {
+        "id": {
           "type": "string",
-          "description": "The title of the song."
+          "description": "Unique identifier for the patron."
         },
-        "lyrics": {
+        "displayName": {
           "type": "string",
-          "description": "The lyrics of the song."
-        },
-        "isAvailable": {
-          "type": "boolean",
-          "description": "Whether the song is available for requests."
+          "description": "The display name of the patron."
         }
       },
-      "required": ["title"]
+      "required": [
+        "id",
+        "displayName"
+      ]
+    },
+    "Tip": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tip",
+      "type": "object",
+      "description": "Represents a tip given by a patron to the KJ or band.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tip."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the tip."
+        },
+        "tipTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the tip was given.",
+          "format": "date-time"
+        },
+        "patronId": {
+          "type": "string",
+          "description": "Reference to Patron. (Relationship: Patron 1:N Tip)"
+        }
+      },
+      "required": [
+        "id",
+        "amount",
+        "tipTime",
+        "patronId"
+      ]
+    },
+    "KaraokeJockey": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "KaraokeJockey",
+      "type": "object",
+      "description": "Represents a karaoke jockey or admin user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the karaoke jockey."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the karaoke jockey."
+        }
+      },
+      "required": [
+        "id",
+        "displayName"
+      ]
     }
   },
   "auth": {
-    "providers": []
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/artists/{artistId}": {
-      "schema": {
-        "$ref": "#/entities/artist"
+    "structure": [
+      {
+        "path": "/patrons/{patronId}",
+        "definition": {
+          "entityName": "Patron",
+          "schema": {
+            "$ref": "#/backend/entities/Patron"
+          },
+          "description": "Stores patron profiles.  `patronId` is equal to `request.auth.uid`.",
+          "params": [
+            {
+              "name": "patronId",
+              "description": "The unique identifier for the patron. Must match the authenticated user's UID."
+            }
+          ]
+        }
       },
-      "description": "Collection of all karaoke artists."
-    },
-    "/artists/{artistId}/songs/{songId}": {
-      "schema": {
-        "$ref": "#/entities/song"
+      {
+        "path": "/patrons/{patronId}/song_requests/{songRequestId}",
+        "definition": {
+          "entityName": "SongRequest",
+          "schema": {
+            "$ref": "#/backend/entities/SongRequest"
+          },
+          "description": "Stores song requests submitted by patrons. `patronId` matches the patron document id; `songRequestId` is a unique identifier for the song request.",
+          "params": [
+            {
+              "name": "patronId",
+              "description": "The unique identifier for the patron who submitted the request. Must match the authenticated user's UID."
+            },
+            {
+              "name": "songRequestId",
+              "description": "The unique identifier for the song request."
+            }
+          ]
+        }
       },
-      "description": "Sub-collection of songs for a specific artist."
-    }
+      {
+        "path": "/patrons/{patronId}/tips/{tipId}",
+        "definition": {
+          "entityName": "Tip",
+          "schema": {
+            "$ref": "#/backend/entities/Tip"
+          },
+          "description": "Stores tips given by patrons. `patronId` matches the patron document id; `tipId` is a unique identifier for the tip.",
+          "params": [
+            {
+              "name": "patronId",
+              "description": "The unique identifier for the patron who gave the tip. Must match the authenticated user's UID."
+            },
+            {
+              "name": "tipId",
+              "description": "The unique identifier for the tip."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/karaoke_jockeys/{karaokeJockeyId}",
+        "definition": {
+          "entityName": "KaraokeJockey",
+          "schema": {
+            "$ref": "#/backend/entities/KaraokeJockey"
+          },
+          "description": "Stores karaoke jockey profiles. `karaokeJockeyId` is the document ID.",
+          "params": [
+            {
+              "name": "karaokeJockeyId",
+              "description": "The unique identifier for the karaoke jockey."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support a karaoke queue management application with real-time updates and role-based access control. It uses a combination of path-based ownership for patrons' data and a global collection for Karaoke Jockeys. The structure prioritizes authorization independence by denormalizing data where needed and ensures secure list operations (QAPs) via structural segregation.  Specifically, the song requests are stored as subcollections of patron documents enabling secure reads and writes based on the patron's ID. Tips are also stored as subcollections of patrons. The karaoke jockeys are stored in a root collection which allows for simple role-based access control. This design eliminates the need for complex `get()` calls in security rules, enabling atomic operations and improving debuggability. Denormalizing the `members` map is not applicable here, as there are not collaborative entities modeled."
   }
 }
