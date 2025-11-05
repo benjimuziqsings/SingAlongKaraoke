@@ -13,7 +13,7 @@ if (serviceKey) {
     }) : apps[0];
     db = getFirestore(firebaseApp);
   } catch (error: any) {
-    console.error(`
+      console.error(`
       ****************************************************************
       *** ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY.   ***
       *** Please make sure you have copied the entire JSON object ***
@@ -39,28 +39,33 @@ if (serviceKey) {
 }
 
 function createMockDb() {
-    const mockDoc = {
+    const mockDoc = (id?: string) => ({
+        id: id || 'mockId',
         update: () => Promise.resolve(),
         delete: () => Promise.resolve(),
-        get: () => Promise.resolve({ docs: [] }),
+        get: () => Promise.resolve({ docs: [], data: () => ({}) }),
         collection: (name: string) => mockCollection(name),
-    };
+    });
 
     const mockCollection = (name?: string) => ({
         get: () => Promise.resolve({ docs: [] }),
-        add: () => Promise.resolve(),
-        doc: (id?: string) => mockDoc,
+        add: () => Promise.resolve({ id: 'mockId' }),
+        doc: (id?: string) => mockDoc(id),
     });
-    
+
     return {
         collection: (name: string) => mockCollection(name),
-        doc: (path: string) => mockDoc,
+        doc: (path: string) => mockDoc(),
         batch: () => ({
-            delete: (docRef: any) => {},
+            set: () => {},
+            update: () => {},
+            delete: () => {},
             commit: () => Promise.resolve(),
         }),
         writeBatch: () => ({
-            delete: (docRef: any) => {},
+            set: () => {},
+            update: () => {},
+            delete: () => {},
             commit: () => Promise.resolve(),
         }),
     };
