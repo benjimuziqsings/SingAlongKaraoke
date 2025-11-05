@@ -1,5 +1,6 @@
 
-import { getNowPlaying, getQueue, getSongHistory } from '@/lib/actions';
+'use client';
+
 import { Header } from '@/components/Header';
 import { NowPlaying } from '@/components/NowPlaying';
 import { SongQueue } from '@/components/SongQueue';
@@ -9,6 +10,8 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ReviewDialog } from '@/components/ReviewDialog';
+import { type GroupedSong } from '@/lib/types';
+
 
 function QueueLoadingSkeleton() {
   return (
@@ -25,12 +28,26 @@ function QueueLoadingSkeleton() {
 
 
 export default function Home() {
+  // Data will be fetched via hooks in a later step
+  const nowPlaying: GroupedSong | null = null;
+  const queue: GroupedSong[] = [];
+  const history: GroupedSong[] = [];
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
         <Suspense fallback={<QueueLoadingSkeleton />}>
-          <PatronView />
+           <div className="space-y-8">
+            <NowPlaying song={nowPlaying} />
+            <SongQueue songs={queue} title="Up Next" />
+            {history.length > 0 && (
+              <>
+                <Separator className="my-12" />
+                <SongQueue songs={history} title="Song History" isHistory />
+              </>
+            )}
+          </div>
         </Suspense>
       </main>
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border p-4 z-10">
@@ -42,23 +59,4 @@ export default function Home() {
       </footer>
     </div>
   );
-}
-
-async function PatronView() {
-  const nowPlaying = await getNowPlaying();
-  const queue = await getQueue();
-  const history = await getSongHistory();
-
-  return (
-    <div className="space-y-8">
-      <NowPlaying song={nowPlaying} />
-      <SongQueue songs={queue} title="Up Next" />
-      {history.length > 0 && (
-        <>
-          <Separator className="my-12" />
-          <SongQueue songs={history} title="Song History" isHistory />
-        </>
-      )}
-    </div>
-  )
 }

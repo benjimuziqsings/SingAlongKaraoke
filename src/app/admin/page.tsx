@@ -1,4 +1,6 @@
-import { getFullQueue, getArtists } from '@/lib/actions';
+
+'use client';
+
 import { AdminQueue } from '@/components/admin/AdminQueue';
 import { Header } from '@/components/Header';
 import { AdminNowPlaying } from '@/components/admin/AdminNowPlaying';
@@ -19,6 +21,13 @@ function AdminLoadingSkeleton() {
 }
 
 export default function AdminPage() {
+    // Data will be fetched via hooks in a later step
+    const fullQueue: GroupedSong[] = [];
+    const artists: Artist[] = [];
+    const nowPlaying = fullQueue.find((s) => s.status === 'playing') || null;
+    const upcoming = fullQueue.filter((s) => s.status === 'queued');
+
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header isAdmin />
@@ -27,34 +36,23 @@ export default function AdminPage() {
           KJ Dashboard
         </h1>
         <Suspense fallback={<AdminLoadingSkeleton/>}>
-          <AdminView />
+          <Tabs defaultValue="queue" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="queue">Queue Management</TabsTrigger>
+              <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
+            </TabsList>
+            <TabsContent value="queue">
+              <div className="space-y-8">
+                <AdminNowPlaying nowPlaying={nowPlaying} />
+                <AdminQueue upcomingSongs={upcoming} />
+              </div>
+            </TabsContent>
+            <TabsContent value="catalog">
+              <CatalogManagement artists={artists} />
+            </TabsContent>
+          </Tabs>
         </Suspense>
       </main>
     </div>
   );
-}
-
-async function AdminView() {
-    const fullQueue: GroupedSong[] = await getFullQueue();
-    const artists: Artist[] = await getArtists();
-    const nowPlaying = fullQueue.find((s) => s.status === 'playing') || null;
-    const upcoming = fullQueue.filter((s) => s.status === 'queued');
-
-    return (
-        <Tabs defaultValue="queue" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="queue">Queue Management</TabsTrigger>
-            <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
-          </TabsList>
-          <TabsContent value="queue">
-            <div className="space-y-8">
-              <AdminNowPlaying nowPlaying={nowPlaying} />
-              <AdminQueue upcomingSongs={upcoming} />
-            </div>
-          </TabsContent>
-          <TabsContent value="catalog">
-            <CatalogManagement artists={artists} />
-          </TabsContent>
-        </Tabs>
-    );
 }
