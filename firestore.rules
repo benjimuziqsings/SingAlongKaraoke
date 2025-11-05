@@ -37,15 +37,15 @@ service cloud.firestore {
         allow update, delete: if isOwner(resource.data.patronId);
     }
 
-    // Catalog can be read by anyone, but only written to by admins (not enforced yet).
+    // Catalog can be read by anyone, and written to by any signed-in user.
     match /artists/{artistId} {
       allow read: if true;
-      allow write: if false; // Placeholder: Add admin check later
+      allow write: if isSignedIn(); 
     }
 
     match /artists/{artistId}/songs/{songId} {
         allow read: if true;
-        allow write: if false; // Placeholder: Add admin check later
+        allow write: if isSignedIn();
     }
     
     // Reviews can be read by anyone.
