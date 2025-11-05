@@ -1,12 +1,14 @@
 'use client';
 import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Mic2, Music, User, MessageSquare, Users } from 'lucide-react';
+import { Mic2, Music, User, MessageSquare, Users, BookOpen } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Button } from './ui/button';
+import { LyricsDialog } from './LyricsDialog';
 
 type NowPlayingProps = {
   song: GroupedSong | null;
@@ -36,7 +38,7 @@ export function NowPlaying({ song }: NowPlayingProps) {
                   {song.artist}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                  <Popover>
                     <PopoverTrigger asChild>
                        <p className="text-lg text-foreground flex items-center gap-2 cursor-pointer">
@@ -77,6 +79,7 @@ export function NowPlaying({ song }: NowPlayingProps) {
                     </PopoverContent>
                   </Popover>
                 )}
+                <LyricsDialog song={song} />
               </div>
             </div>
           ) : (
