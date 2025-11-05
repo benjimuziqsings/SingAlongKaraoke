@@ -23,8 +23,7 @@ if (serviceKey) {
       *** Parser error: ${error.message}                          ***
       ****************************************************************
     `);
-    // Fallback to a more complete mock db to prevent app crash
-    db = createMockDb();
+    db = null; // Set db to null on error
   }
 } else {
   console.warn(`
@@ -34,41 +33,7 @@ if (serviceKey) {
     *** Please follow the instructions in the README.md to set it up. ***
     ****************************************************************
   `);
-  // Use a mock db object if the service key is not set
-  db = createMockDb();
-}
-
-function createMockDb() {
-    const mockDoc = (id?: string) => ({
-        id: id || 'mockId',
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-        get: () => Promise.resolve({ docs: [], data: () => ({}) }),
-        collection: (name: string) => mockCollection(name),
-    });
-
-    const mockCollection = (name?: string) => ({
-        get: () => Promise.resolve({ docs: [] }),
-        add: () => Promise.resolve({ id: 'mockId' }),
-        doc: (id?: string) => mockDoc(id),
-    });
-
-    return {
-        collection: (name: string) => mockCollection(name),
-        doc: (path: string) => mockDoc(),
-        batch: () => ({
-            set: () => {},
-            update: () => {},
-            delete: () => {},
-            commit: () => Promise.resolve(),
-        }),
-        writeBatch: () => ({
-            set: () => {},
-            update: () => {},
-            delete: () => {},
-            commit: () => Promise.resolve(),
-        }),
-    };
+  db = null; // Set db to null if key is not set
 }
 
 export { db };

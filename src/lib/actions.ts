@@ -8,8 +8,8 @@ import { db } from '@/firebase/admin';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
 
-// This is the definitive check. If the service key isn't set or is malformed, this will be false.
-const useFirestore = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && process.env.FIREBASE_SERVICE_ACCOUNT_KEY.startsWith('{');
+// This is the definitive check. If db is null, Firestore is not configured.
+const useFirestore = db !== null;
 
 function groupSongs(songs: Song[]): GroupedSong[] {
   const songGroups: Map<string, GroupedSong> = new Map();
