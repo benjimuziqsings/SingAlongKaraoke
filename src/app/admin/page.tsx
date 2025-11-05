@@ -11,13 +11,9 @@ import { karaokeCatalog } from '@/lib/karaoke-catalog';
 
 function AdminLoadingSkeleton() {
   return (
-    <div className="grid lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-4">
-        <Skeleton className="h-96 w-full" />
-      </div>
-      <div className="space-y-8">
-        <Skeleton className="h-48 w-full" />
-      </div>
+    <div className="space-y-8">
+      <Skeleton className="h-48 w-full" />
+      <Skeleton className="h-96 w-full" />
     </div>
   )
 }
@@ -50,13 +46,9 @@ async function AdminView() {
             <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
           </TabsList>
           <TabsContent value="queue">
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <AdminQueue upcomingSongs={upcoming} />
-              </div>
-              <div className="space-y-8">
-                <AdminNowPlaying nowPlaying={nowPlaying} />
-              </div>
+            <div className="space-y-8">
+              <AdminNowPlaying nowPlaying={nowPlaying} />
+              <AdminQueue upcomingSongs={upcoming} />
             </div>
           </TabsContent>
           <TabsContent value="catalog">
