@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addSong } from '@/lib/actions';
+import { addSong, getLockedSongs } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { karaokeCatalog, Artist } from '@/lib/karaoke-catalog';
 
@@ -57,8 +58,24 @@ const suggestionSchema = z.object({
 export function SongRequestDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const [artists] = useState<Artist[]>(karaokeCatalog);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [songs, setSongs] = useState<{ title: string }[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchAndFilter = async () => {
+        const lockedSongs = await getLockedSongs();
+        const availableArtists = karaokeCatalog.map(artist => {
+            const availableSongs = artist.songs.filter(song => 
+                !lockedSongs.some(locked => locked.title === song.title && locked.artist === artist.name)
+            );
+            return { ...artist, songs: availableSongs };
+        }).filter(artist => artist.songs.length > 0);
+        setArtists(availableArtists);
+      };
+      fetchAndFilter();
+    }
+  }, [isOpen]);
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),

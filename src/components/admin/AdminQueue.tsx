@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
-import { removeSong, setNowPlaying } from '@/lib/actions';
+import { removeSong, setNowPlaying, toggleLockSong } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, MessageSquare } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { cn } from '@/lib/utils';
 
 type AdminQueueProps = {
   upcomingSongs: GroupedSong[];
@@ -48,6 +50,17 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
     });
   };
 
+  const handleToggleLock = (song: GroupedSong) => {
+    startTransition(async () => {
+      await toggleLockSong(song.id);
+      toast({
+        title: `Song ${song.isLocked ? 'Unlocked' : 'Locked'}`,
+        description: `"${song.title}" has been ${song.isLocked ? 'unlocked' : 'locked'}.`,
+      });
+    });
+  };
+
+
   return (
     <Card>
       <CardHeader>
@@ -69,10 +82,13 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
             </TableHeader>
             <TableBody>
               {upcomingSongs.map((song, index) => (
-                <TableRow key={song.id} className="group">
+                <TableRow key={song.id} className={cn("group", song.isLocked && "bg-muted/30")}>
                   <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                   <TableCell>
-                    <div className="font-medium">{song.title}</div>
+                    <div className="font-medium flex items-center gap-2">
+                      {song.isLocked && <Lock className="h-4 w-4 text-accent" />}
+                      {song.title}
+                    </div>
                     <div className="text-sm text-muted-foreground">{song.artist}</div>
                   </TableCell>
                   <TableCell>
@@ -96,7 +112,7 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
                         </PopoverContent>
                       </Popover>
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="text-right space-x-1">
                     <Button
                       size="icon"
                       variant="ghost"
@@ -116,6 +132,16 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
                        aria-label="Remove song"
                     >
                       <Trash2 className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className={cn("text-muted-foreground hover:text-accent", song.isLocked && "text-accent")}
+                        onClick={() => handleToggleLock(song)}
+                        disabled={isPending}
+                        aria-label={song.isLocked ? 'Unlock song' : 'Lock song'}
+                    >
+                        {song.isLocked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -14,6 +14,7 @@ export type Song = {
   announcement?: string;
   status: SongStatus;
   createdAt: number;
+  isLocked?: boolean;
 };
 
 export type GroupedSong = {
@@ -23,6 +24,7 @@ export type GroupedSong = {
   status: SongStatus;
   createdAt: number;
   id: string;
+  isLocked?: boolean;
 };
 
 export type Review = {

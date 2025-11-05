@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -17,6 +18,7 @@ function groupSongs(songs: Song[]): GroupedSong[] {
         requesters: [],
         status: song.status,
         createdAt: song.createdAt,
+        isLocked: song.isLocked,
       });
     }
 
@@ -28,6 +30,10 @@ function groupSongs(songs: Song[]): GroupedSong[] {
     // Keep the createdAt of the first request
     if (song.createdAt < group.createdAt) {
       group.createdAt = song.createdAt;
+    }
+    // If any of the songs in the group is locked, the whole group is locked.
+    if(song.isLocked) {
+      group.isLocked = true;
     }
   });
 
@@ -66,6 +72,10 @@ export async function getFullQueue() {
     });
 
   return groupSongs(activeSongs);
+}
+
+export async function getLockedSongs() {
+  return songQueue.filter(s => s.isLocked).map(s => ({ title: s.title, artist: s.artist }));
 }
 
 // WRITE actions
@@ -145,6 +155,23 @@ export async function removeSong(songId: string) {
   revalidatePath('/');
   revalidatePath('/admin');
 }
+
+export async function toggleLockSong(songId: string) {
+    const songToToggle = songQueue.find(s => s.id === songId);
+    if (!songToToggle) return;
+
+    const currentlyLocked = !!songToToggle.isLocked;
+
+    // Toggle lock status for all songs with the same title and artist
+    songQueue.forEach(song => {
+        if (song.title === songToToggle.title && song.artist === songToToggle.artist) {
+            song.isLocked = !currentlyLocked;
+        }
+    });
+    revalidatePath('/admin');
+    revalidatePath('/'); // To update catalog
+}
+
 
 // Review actions
 export async function getReviews(): Promise<Review[]> {
