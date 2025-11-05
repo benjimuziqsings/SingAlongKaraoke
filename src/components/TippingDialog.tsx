@@ -50,9 +50,11 @@ export function TippingDialog() {
             <PartyPopper className="h-5 w-5 text-accent" />
             Support the Show!
           </DialogTitle>
-          <DialogDescription className="text-center italic pt-2">
-            "Tipping is not a MUST but its a PLUS and it goes a long way with US!"
-            <p className="not-italic text-sm text-muted-foreground mt-1">Thank you for your support!</p>
+          <DialogDescription asChild>
+            <div className="text-center pt-2">
+                <p className="italic">"Tipping is not a MUST but its a PLUS and it goes a long way with US!"</p>
+                <p className="not-italic text-sm text-muted-foreground mt-1">Thank you for your support!</p>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6">
