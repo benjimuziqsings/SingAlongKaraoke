@@ -6,7 +6,6 @@ import type { GroupedSong, Song, Review } from './types';
 import { db } from '@/firebase/admin';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
-import { karaokeCatalog } from './karaoke-catalog';
 
 const useFirestore = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -310,7 +309,7 @@ export async function addReview(formData: FormData) {
 // Catalog Management Actions
 export async function getArtists(): Promise<Artist[]> {
     if (!useFirestore) {
-      return karaokeCatalog.map((a, i) => ({...a, id: i.toString()}));
+      return [];
     }
     const artistsCol = collection(db, 'artists');
     const artistSnapshot = await getDocs(artistsCol);
