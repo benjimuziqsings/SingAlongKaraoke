@@ -1,6 +1,12 @@
+'use client';
 import type { Song } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Mic2, Music, User, MessageSquare } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type NowPlayingProps = {
   song: Song | null;
@@ -28,16 +34,22 @@ export function NowPlaying({ song }: NowPlayingProps) {
                   {song.artist}
                 </p>
               </div>
-              <p className="text-lg text-foreground flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Sung by <span className="font-bold text-accent">{song.singer}</span>
-              </p>
-              {song.announcement && (
-                <CardDescription className="pt-2 border-t border-border/50 flex items-start gap-3 text-base">
-                  <MessageSquare className="h-5 w-5 mt-1 shrink-0 text-accent/80" />
-                  <blockquote className="italic">"{song.announcement}"</blockquote>
-                </CardDescription>
-              )}
+              <div className="flex items-center gap-2">
+                <p className="text-lg text-foreground flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Requested by <span className="font-bold text-accent">{song.singer}</span>
+                </p>
+                {song.announcement && (
+                  <Popover>
+                    <PopoverTrigger>
+                      <MessageSquare className="h-5 w-5 text-accent/80 cursor-pointer hover:text-accent" />
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <p className="text-sm italic">"{song.announcement}"</p>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-center py-8">

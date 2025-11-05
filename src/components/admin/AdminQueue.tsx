@@ -15,8 +15,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, User, Music } from 'lucide-react';
+import { Play, Trash2, ListMusic, User, Music, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 type AdminQueueProps = {
   upcomingSongs: Song[];
@@ -61,8 +62,9 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">#</TableHead>
-                <TableHead><User className="h-4 w-4 inline-block mr-1"/>Singer</TableHead>
+                <TableHead><User className="h-4 w-4 inline-block mr-1"/>Requester</TableHead>
                 <TableHead><Music className="h-4 w-4 inline-block mr-1"/>Song</TableHead>
+                <TableHead>Note</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -74,6 +76,20 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
                   <TableCell>
                     <div className="font-medium">{song.title}</div>
                     <div className="text-sm text-muted-foreground">{song.artist}</div>
+                  </TableCell>
+                  <TableCell>
+                     {song.announcement && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
+                            <MessageSquare className="h-5 w-5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <p className="text-sm italic">"{song.announcement}"</p>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button

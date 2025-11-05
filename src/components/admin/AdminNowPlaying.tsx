@@ -4,9 +4,14 @@ import { useTransition } from 'react';
 import type { Song } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Mic2, Music, User } from 'lucide-react';
+import { CheckCircle, Mic2, Music, User, MessageSquare } from 'lucide-react';
 import { finishSong } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type AdminNowPlayingProps = {
   nowPlaying: Song | null;
@@ -45,10 +50,22 @@ export function AdminNowPlaying({ nowPlaying }: AdminNowPlayingProps) {
                 {nowPlaying.artist}
               </p>
             </div>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {nowPlaying.singer}
-            </p>
+            <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {nowPlaying.singer}
+                </p>
+                {nowPlaying.announcement && (
+                  <Popover>
+                    <PopoverTrigger>
+                      <MessageSquare className="h-4 w-4 text-accent/80 cursor-pointer hover:text-accent" />
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <p className="text-sm italic">"{nowPlaying.announcement}"</p>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
             <Button
               className="w-full"
               variant="destructive"

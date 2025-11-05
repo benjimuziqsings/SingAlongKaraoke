@@ -1,7 +1,13 @@
+'use client';
 import type { Song } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ListMusic, User } from 'lucide-react';
+import { ListMusic, User, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from './EmptyQueue';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type SongQueueProps = {
   songs: Song[];
@@ -28,6 +34,16 @@ export function SongQueue({ songs }: SongQueueProps) {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground pr-2">
                     <User className="h-4 w-4" />
                     <span>{song.singer}</span>
+                     {song.announcement && (
+                      <Popover>
+                        <PopoverTrigger>
+                          <MessageSquare className="h-4 w-4 text-accent/80 cursor-pointer hover:text-accent" />
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <p className="text-sm italic">"{song.announcement}"</p>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </div>
                 </CardContent>
               </Card>
