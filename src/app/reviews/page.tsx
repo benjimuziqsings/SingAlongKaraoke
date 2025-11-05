@@ -1,11 +1,13 @@
 
+'use client';
+
 import { getReviews } from '@/lib/actions';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Star, UserCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Review } from '@/lib/types';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ReviewsLoadingSkeleton() {
@@ -34,8 +36,24 @@ export default function ReviewsPage() {
     );
 }
 
-async function ReviewsList() {
-    const reviews = await getReviews();
+function ReviewsList() {
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchReviews() {
+            setIsLoading(true);
+            const fetchedReviews = await getReviews();
+            setReviews(fetchedReviews);
+            setIsLoading(false);
+        }
+        fetchReviews();
+    }, []);
+
+
+    if (isLoading) {
+        return <ReviewsLoadingSkeleton />;
+    }
 
     return (
         <div className="space-y-6">

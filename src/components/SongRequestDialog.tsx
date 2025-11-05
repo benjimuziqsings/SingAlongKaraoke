@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addSong, getLockedSongs, getArtists } from '@/lib/actions';
+import { addSong, getArtists } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Artist } from '@/lib/karaoke-catalog';
 
