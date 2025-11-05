@@ -6,6 +6,9 @@ import { QRCodePlaceholder } from '@/components/admin/QRCodePlaceholder';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GroupedSong } from '@/lib/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CatalogManagement } from '@/components/admin/CatalogManagement';
+import { karaokeCatalog } from '@/lib/karaoke-catalog';
 
 function AdminLoadingSkeleton() {
   return (
@@ -43,14 +46,25 @@ async function AdminView() {
     const upcoming = fullQueue.filter((s) => s.status === 'queued');
 
     return (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <AdminQueue upcomingSongs={upcoming} />
-          </div>
-          <div className="space-y-8">
-            <AdminNowPlaying nowPlaying={nowPlaying} />
-            <QRCodePlaceholder />
-          </div>
-        </div>
+        <Tabs defaultValue="queue" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="queue">Queue Management</TabsTrigger>
+            <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
+          </TabsList>
+          <TabsContent value="queue">
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <AdminQueue upcomingSongs={upcoming} />
+              </div>
+              <div className="space-y-8">
+                <AdminNowPlaying nowPlaying={nowPlaying} />
+                <QRCodePlaceholder />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="catalog">
+            <CatalogManagement artists={karaokeCatalog} />
+          </TabsContent>
+        </Tabs>
     );
 }

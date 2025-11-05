@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { songQueue, reviews } from './data';
+import { songQueue, reviews, karaokeCatalog } from './data';
 import type { GroupedSong, Song, Review } from './types';
 
 function groupSongs(songs: Song[]): GroupedSong[] {
@@ -75,7 +75,17 @@ export async function getFullQueue() {
 }
 
 export async function getLockedSongs() {
-  return songQueue.filter(s => s.isLocked).map(s => ({ title: s.title, artist: s.artist }));
+  // This is a Set to prevent duplicates for songs locked by multiple requests.
+  const locked = new Set<string>();
+  songQueue.forEach(s => {
+    if (s.isLocked) {
+      locked.add(`${s.title}|${s.artist}`);
+    }
+  });
+  return Array.from(locked).map(l => {
+    const [title, artist] = l.split('|');
+    return { title, artist };
+  });
 }
 
 // WRITE actions
@@ -194,4 +204,52 @@ export async function addReview(formData: FormData) {
   reviews.push(newReview);
   revalidatePath('/reviews');
   return { review: newReview };
+}
+
+
+// Catalog Management Actions
+export async function addArtist(formData: FormData) {
+    const artistName = formData.get('name') as string;
+    if (!artistName || karaokeCatalog.some(a => a.name.toLowerCase() === artistName.toLowerCase())) {
+        return { error: 'Artist already exists or name is invalid.' };
+    }
+    karaokeCatalog.push({ name: artistName, songs: [] });
+    karaokeCatalog.sort((a, b) => a.name.localeCompare(b.name));
+    revalidatePath('/admin');
+    return { success: true };
+}
+
+export async function addSongToCatalog(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const title = formData.get('title') as string;
+    const artist = karaokeCatalog.find(a => a.name === artistName);
+    if (!artist || !title) {
+        return { error: 'Artist not found or title is invalid.' };
+    }
+    if (artist.songs.some(s => s.title.toLowerCase() === title.toLowerCase())) {
+        return { error: 'Song already exists for this artist.' };
+    }
+    artist.songs.push({ title });
+    artist.songs.sort((a, b) => a.title.localeCompare(b.title));
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+}
+
+export async function updateLyrics(formData: FormData) {
+    const artistName = formData.get('artistName') as string;
+    const title = formData.get('title') as string;
+    const lyrics = formData.get('lyrics') as string;
+
+    const artist = karaokeCatalog.find(a => a.name === artistName);
+    if (!artist) {
+        return { error: 'Artist not found.' };
+    }
+    const song = artist.songs.find(s => s.title === title);
+    if (!song) {
+        return { error: 'Song not found.' };
+    }
+    song.lyrics = lyrics;
+    revalidatePath('/admin');
+    return { success: true };
 }

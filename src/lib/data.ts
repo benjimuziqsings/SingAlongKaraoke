@@ -1,4 +1,5 @@
 import type { Song, Review } from './types';
+import type { Artist } from './karaoke-catalog';
 
 // In-memory store, will be reset on server restart.
 export const songQueue: Song[] = [
@@ -13,3 +14,5 @@ export const reviews: Review[] = [
     { id: '1', name: 'Alice', rating: 5, comment: 'The KJ was amazing! Great song selection.', createdAt: Date.now() - 300000 },
     { id: '2', name: 'Bob', rating: 4, comment: 'Fun night, but the speakers were a bit loud.', createdAt: Date.now() - 150000 },
 ];
+
+export { karaokeCatalog } from './karaoke-catalog';

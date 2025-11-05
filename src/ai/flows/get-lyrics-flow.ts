@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { karaokeCatalog } from '@/lib/karaoke-catalog';
 
 const GetLyricsInputSchema = z.object({
   title: z.string().describe('The title of the song.'),
@@ -37,6 +38,15 @@ const getLyricsFlow = ai.defineFlow(
     outputSchema: GetLyricsOutputSchema,
   },
   async (input) => {
+    // First, check our own catalog
+    const artist = karaokeCatalog.find(a => a.name === input.artist);
+    const song = artist?.songs.find(s => s.title === input.title);
+
+    if (song?.lyrics) {
+      return { lyrics: song.lyrics };
+    }
+
+    // If not found, use the AI prompt
     const {output} = await lyricsPrompt(input);
     return output!;
   }

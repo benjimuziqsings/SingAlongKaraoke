@@ -1,6 +1,7 @@
 
 export type CatalogSong = {
   title: string;
+  lyrics?: string;
 };
 
 export type Artist = {
@@ -12,7 +13,7 @@ export const karaokeCatalog: Artist[] = [
   {
     name: 'Queen',
     songs: [
-      { title: 'Bohemian Rhapsody' },
+      { title: 'Bohemian Rhapsody', lyrics: `Is this the real life? Is this just fantasy?` },
       { title: 'Don\'t Stop Me Now' },
       { title: 'Another One Bites the Dust' },
       { title: 'Somebody to Love' },
