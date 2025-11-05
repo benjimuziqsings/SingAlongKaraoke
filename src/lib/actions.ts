@@ -1,9 +1,14 @@
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { songQueue, reviews, karaokeCatalog } from './data';
+import { songQueue, reviews } from './data';
 import type { GroupedSong, Song, Review } from './types';
+import { db } from '@/firebase/admin';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
+import { karaokeCatalog } from './karaoke-catalog';
+
+const useFirestore = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 function groupSongs(songs: Song[]): GroupedSong[] {
   const songGroups: Map<string, GroupedSong> = new Map();
@@ -83,20 +88,26 @@ export async function getLockedSongs() {
     }
   });
   
-  karaokeCatalog.forEach(artist => {
-    if (artist.isAvailable === false) {
-        // if artist is unavailable, all their songs are unavailable
-        artist.songs.forEach(song => {
-            locked.add(`${song.title}|${artist.name}`);
-        });
-    } else {
-        artist.songs.forEach(song => {
-            if (song.isAvailable === false) {
-                locked.add(`${song.title}|${artist.name}`);
-            }
-        });
+  if (useFirestore) {
+    const artistsSnapshot = await getDocs(collection(db, 'artists'));
+    for (const artistDoc of artistsSnapshot.docs) {
+        const artist = artistDoc.data() as Artist;
+        if (artist.isAvailable === false) {
+            const songsSnapshot = await getDocs(collection(db, 'artists', artistDoc.id, 'songs'));
+            songsSnapshot.forEach(songDoc => {
+                locked.add(`${songDoc.data().title}|${artist.name}`);
+            });
+        } else {
+            const songsSnapshot = await getDocs(collection(db, 'artists', artistDoc.id, 'songs'));
+            songsSnapshot.forEach(songDoc => {
+                const song = songDoc.data() as CatalogSong;
+                if (song.isAvailable === false) {
+                    locked.add(`${song.title}|${artist.name}`);
+                }
+            });
+        }
     }
-  });
+  }
 
 
   return Array.from(locked).map(l => {
@@ -297,106 +308,146 @@ export async function addReview(formData: FormData) {
 
 
 // Catalog Management Actions
+export async function getArtists(): Promise<Artist[]> {
+    if (!useFirestore) {
+      return karaokeCatalog.map((a, i) => ({...a, id: i.toString()}));
+    }
+    const artistsCol = collection(db, 'artists');
+    const artistSnapshot = await getDocs(artistsCol);
+    const artists: Artist[] = [];
+    for (const artistDoc of artistSnapshot.docs) {
+      const artistData = artistDoc.data();
+      const songsCol = collection(db, 'artists', artistDoc.id, 'songs');
+      const songSnapshot = await getDocs(songsCol);
+      const songs = songSnapshot.docs.map(songDoc => ({ id: songDoc.id, ...songDoc.data() } as CatalogSong));
+      artists.push({
+        id: artistDoc.id,
+        name: artistData.name,
+        songs: songs.sort((a, b) => a.title.localeCompare(b.title)),
+        isAvailable: artistData.isAvailable,
+      });
+    }
+    return artists.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+
 export async function addArtist(formData: FormData) {
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
     const artistName = formData.get('name') as string;
-    if (!artistName || karaokeCatalog.some(a => a.name.toLowerCase() === artistName.toLowerCase())) {
+
+    const artistsCol = collection(db, 'artists');
+    const q = await getDocs(artistsCol);
+    const artistExists = q.docs.some(doc => doc.data().name.toLowerCase() === artistName.toLowerCase());
+
+    if (!artistName || artistExists) {
         return { error: 'Artist already exists or name is invalid.' };
     }
-    karaokeCatalog.push({ name: artistName, songs: [], isAvailable: true });
-    karaokeCatalog.sort((a, b) => a.name.localeCompare(b.name));
+    await addDoc(artistsCol, { name: artistName, isAvailable: true });
     revalidatePath('/admin');
     return { success: true };
 }
 
 export async function addSongToCatalog(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
     const title = formData.get('title') as string;
-    const artist = karaokeCatalog.find(a => a.name === artistName);
-    if (!artist || !title) {
+
+    if (!artistId || !title) {
         return { error: 'Artist not found or title is invalid.' };
     }
-    if (artist.songs.some(s => s.title.toLowerCase() === title.toLowerCase())) {
+
+    const songsCol = collection(db, 'artists', artistId, 'songs');
+    const q = await getDocs(songsCol);
+    const songExists = q.docs.some(doc => doc.data().title.toLowerCase() === title.toLowerCase());
+
+    if (songExists) {
         return { error: 'Song already exists for this artist.' };
     }
-    artist.songs.push({ title, isAvailable: true });
-    artist.songs.sort((a, b) => a.title.localeCompare(b.title));
+
+    await addDoc(songsCol, { title, isAvailable: true });
     revalidatePath('/admin');
     revalidatePath('/');
     return { success: true };
 }
 
 export async function updateLyrics(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
-    const title = formData.get('title') as string;
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
+    const songId = formData.get('songId') as string;
     const lyrics = formData.get('lyrics') as string;
 
-    const artist = karaokeCatalog.find(a => a.name === artistName);
-    if (!artist) {
-        return { error: 'Artist not found.' };
+    if (!artistId || !songId) {
+        return { error: 'Artist or song not found.' };
     }
-    const song = artist.songs.find(s => s.title === title);
-    if (!song) {
-        return { error: 'Song not found.' };
-    }
-    song.lyrics = lyrics;
+    const songRef = doc(db, 'artists', artistId, 'songs', songId);
+    await updateDoc(songRef, { lyrics });
     revalidatePath('/admin');
     return { success: true };
 }
 
 export async function removeArtistFromCatalog(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
-    const index = karaokeCatalog.findIndex(a => a.name === artistName);
-    if (index === -1) {
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
+    if (!artistId) {
         return { error: 'Artist not found.' };
     }
-    karaokeCatalog.splice(index, 1);
+    const artistRef = doc(db, 'artists', artistId);
+    
+    // Also delete all songs in the subcollection
+    const songsCol = collection(db, 'artists', artistId, 'songs');
+    const songSnapshot = await getDocs(songsCol);
+    const batch = writeBatch(db);
+    songSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    await deleteDoc(artistRef);
     revalidatePath('/admin');
     revalidatePath('/');
     return { success: true };
 }
 
 export async function removeSongFromCatalog(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
-    const title = formData.get('title') as string;
-    const artist = karaokeCatalog.find(a => a.name === artistName);
-    if (!artist) {
-        return { error: 'Artist not found.' };
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
+    const songId = formData.get('songId') as string;
+    if (!artistId || !songId) {
+        return { error: 'Artist or song not found.' };
     }
-    const songIndex = artist.songs.findIndex(s => s.title === title);
-    if (songIndex === -1) {
-        return { error: 'Song not found.' };
-    }
-    artist.songs.splice(songIndex, 1);
+    const songRef = doc(db, 'artists', artistId, 'songs', songId);
+    await deleteDoc(songRef);
     revalidatePath('/admin');
     revalidatePath('/');
     return { success: true };
 }
 
 export async function toggleArtistAvailability(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
-    const artist = karaokeCatalog.find(a => a.name === artistName);
-    if (!artist) {
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
+    const currentAvailability = formData.get('isAvailable') === 'true';
+
+    if (!artistId) {
         return { error: 'Artist not found.' };
     }
-    artist.isAvailable = artist.isAvailable === false; // Toggle
+    const artistRef = doc(db, 'artists', artistId);
+    await updateDoc(artistRef, { isAvailable: !currentAvailability });
     revalidatePath('/admin');
     revalidatePath('/');
     return { success: true };
 }
 
 export async function toggleSongAvailability(formData: FormData) {
-    const artistName = formData.get('artistName') as string;
-    const title = formData.get('title') as string;
-    const artist = karaokeCatalog.find(a => a.name === artistName);
-    if (!artist) {
-        return { error: 'Artist not found.' };
+    if (!useFirestore) return { error: 'Firestore is not configured.' };
+    const artistId = formData.get('artistId') as string;
+    const songId = formData.get('songId') as string;
+    const currentAvailability = formData.get('isAvailable') === 'true';
+    if (!artistId || !songId) {
+        return { error: 'Artist or song not found.' };
     }
-    const song = artist.songs.find(s => s.title === title);
-    if (!song) {
-        return { error: 'Song not found.' };
-    }
-    song.isAvailable = song.isAvailable === false; // Toggle
+    const songRef = doc(db, 'artists', artistId, 'songs', songId);
+    await updateDoc(songRef, { isAvailable: !currentAvailability });
     revalidatePath('/admin');
-revalidatePath('/');
+    revalidatePath('/');
     return { success: true };
 }

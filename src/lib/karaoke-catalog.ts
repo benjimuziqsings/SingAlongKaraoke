@@ -1,11 +1,13 @@
 
 export type CatalogSong = {
+  id?: string;
   title: string;
   lyrics?: string;
   isAvailable?: boolean;
 };
 
 export type Artist = {
+  id?: string;
   name:string;
   songs: CatalogSong[];
   isAvailable?: boolean;

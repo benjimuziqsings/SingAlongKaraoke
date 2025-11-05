@@ -1,4 +1,4 @@
-import { getFullQueue } from '@/lib/actions';
+import { getFullQueue, getArtists } from '@/lib/actions';
 import { AdminQueue } from '@/components/admin/AdminQueue';
 import { Header } from '@/components/Header';
 import { AdminNowPlaying } from '@/components/admin/AdminNowPlaying';
@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { GroupedSong } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CatalogManagement } from '@/components/admin/CatalogManagement';
-import { karaokeCatalog } from '@/lib/karaoke-catalog';
+import { Artist } from '@/lib/karaoke-catalog';
 
 function AdminLoadingSkeleton() {
   return (
@@ -36,6 +36,7 @@ export default function AdminPage() {
 
 async function AdminView() {
     const fullQueue: GroupedSong[] = await getFullQueue();
+    const artists: Artist[] = await getArtists();
     const nowPlaying = fullQueue.find((s) => s.status === 'playing') || null;
     const upcoming = fullQueue.filter((s) => s.status === 'queued');
 
@@ -52,7 +53,7 @@ async function AdminView() {
             </div>
           </TabsContent>
           <TabsContent value="catalog">
-            <CatalogManagement artists={karaokeCatalog} />
+            <CatalogManagement artists={artists} />
           </TabsContent>
         </Tabs>
     );

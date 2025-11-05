@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addSong, getLockedSongs } from '@/lib/actions';
+import { addSong, getLockedSongs, getArtists } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { karaokeCatalog, Artist } from '@/lib/karaoke-catalog';
+import { Artist } from '@/lib/karaoke-catalog';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -64,16 +64,15 @@ export function SongRequestDialog() {
   useEffect(() => {
     if (isOpen) {
       const fetchAndFilter = async () => {
-        const lockedSongs = await getLockedSongs();
-        const availableArtists = karaokeCatalog
-          .filter(artist => artist.isAvailable !== false)
+        const dbArtists = await getArtists();
+        
+        const availableArtists = dbArtists
+          .filter(artist => artist.isAvailable)
           .map(artist => {
-            const availableSongs = artist.songs.filter(song => 
-                song.isAvailable !== false &&
-                !lockedSongs.some(locked => locked.title === song.title && locked.artist === artist.name)
-            );
+            const availableSongs = artist.songs.filter(song => song.isAvailable);
             return { ...artist, songs: availableSongs };
         }).filter(artist => artist.songs.length > 0);
+        
         setArtists(availableArtists);
       };
       fetchAndFilter();
@@ -218,7 +217,7 @@ export function SongRequestDialog() {
                         </FormControl>
                         <SelectContent>
                           {artists.map(artist => (
-                            <SelectItem key={artist.name} value={artist.name}>
+                            <SelectItem key={artist.id} value={artist.name}>
                               {artist.name}
                             </SelectItem>
                           ))}

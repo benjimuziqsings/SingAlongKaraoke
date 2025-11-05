@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "artist": {
+      "title": "Artist",
+      "description": "An artist or band in the karaoke catalog.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the artist."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Whether the artist is available for requests."
+        }
+      },
+      "required": ["name"]
+    },
+    "song": {
+      "title": "Song",
+      "description": "A song in the karaoke catalog, belonging to an artist.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the song."
+        },
+        "lyrics": {
+          "type": "string",
+          "description": "The lyrics of the song."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Whether the song is available for requests."
+        }
+      },
+      "required": ["title"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/artists/{artistId}": {
+      "schema": {
+        "$ref": "#/entities/artist"
+      },
+      "description": "Collection of all karaoke artists."
+    },
+    "/artists/{artistId}/songs/{songId}": {
+      "schema": {
+        "$ref": "#/entities/song"
+      },
+      "description": "Sub-collection of songs for a specific artist."
+    }
+  }
+}
