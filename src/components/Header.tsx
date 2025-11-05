@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { Mic, UserCog, Users, MessageSquareText } from 'lucide-react';
 import { Button } from './ui/button';
+import { QRCodeDialog } from './admin/QRCodeDialog';
 
 export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
@@ -22,6 +23,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                 Reviews
               </Link>
             </Button>
+            {isAdmin && <QRCodeDialog />}
           <Button asChild variant="ghost" size="sm">
             {isAdmin ? (
               <Link href="/">

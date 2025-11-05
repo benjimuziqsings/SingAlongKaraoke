@@ -2,7 +2,6 @@ import { getFullQueue } from '@/lib/actions';
 import { AdminQueue } from '@/components/admin/AdminQueue';
 import { Header } from '@/components/Header';
 import { AdminNowPlaying } from '@/components/admin/AdminNowPlaying';
-import { QRCodePlaceholder } from '@/components/admin/QRCodePlaceholder';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GroupedSong } from '@/lib/types';
@@ -17,7 +16,6 @@ function AdminLoadingSkeleton() {
         <Skeleton className="h-96 w-full" />
       </div>
       <div className="space-y-8">
-        <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     </div>
@@ -58,7 +56,6 @@ async function AdminView() {
               </div>
               <div className="space-y-8">
                 <AdminNowPlaying nowPlaying={nowPlaying} />
-                <QRCodePlaceholder />
               </div>
             </div>
           </TabsContent>
