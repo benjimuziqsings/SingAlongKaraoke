@@ -1,7 +1,7 @@
 'use client';
 import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent } from './ui/card';
-import { ListMusic, User, MessageSquare, Users, History } from 'lucide-react';
+import { ListMusic, Users, History, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from './EmptyQueue';
 import {
   Popover,
@@ -22,7 +22,7 @@ type SongQueueProps = {
   isHistory?: boolean;
 };
 
-export function SongQueue({ songs, title = "Up Next", isHistory = false }: SongQueueProps) {
+export function SongQueue({ songs, title = "History", isHistory = false }: SongQueueProps) {
   return (
     <section aria-labelledby="queue-title">
       <h2 id="queue-title" className="font-headline text-3xl my-6 flex items-center gap-3">
