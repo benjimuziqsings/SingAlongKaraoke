@@ -111,26 +111,6 @@
         "patronId"
       ]
     },
-    "KaraokeJockey": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "KaraokeJockey",
-      "type": "object",
-      "description": "Represents a karaoke jockey or admin user.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the karaoke jockey."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The display name of the karaoke jockey."
-        }
-      },
-      "required": [
-        "id",
-        "displayName"
-      ]
-    },
     "Artist": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Artist",

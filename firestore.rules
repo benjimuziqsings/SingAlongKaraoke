@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 3.
+ * Version 4: Production-ready rules with KJ role.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -23,29 +23,39 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    /**
+     * @description Checks if the user is a Karaoke Jockey (KJ).
+     * This relies on a custom claim being set on the user's auth token.
+     */
+    function isKJ() {
+      return isSignedIn() && request.auth.token.kj == true;
+    }
+
     // Patrons can only read and write their own profile.
     match /patrons/{patronId} {
       allow read, write: if isOwner(patronId);
     }
     
-    // The song queue can be read by any signed-in user (including anonymous).
-    // Signed-in users can create their own requests.
-    // Users can only update/delete their own requests.
+    // The song queue can be read by any signed-in user.
+    // Patrons can create their own requests.
+    // Patrons can only update/delete their *own* requests.
+    // The KJ can update/delete *any* request.
     match /song_requests/{songRequestId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
-        allow update, delete: if isOwner(resource.data.patronId);
+        allow update, delete: if isOwner(resource.data.patronId) || isKJ();
     }
 
-    // Catalog can be read by anyone, and written to by any signed-in user.
+    // Catalog can be read by anyone.
+    // Catalog can only be written to by a KJ.
     match /artists/{artistId} {
       allow read: if true;
-      allow write: if isSignedIn(); 
+      allow write: if isKJ(); 
     }
 
     match /artists/{artistId}/songs/{songId} {
         allow read: if true;
-        allow write: if isSignedIn();
+        allow write: if isKJ();
     }
     
     // Reviews can be read by anyone.
