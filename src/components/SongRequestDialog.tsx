@@ -99,7 +99,7 @@ export function SongRequestDialog() {
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists, catalogForm]);
+  }, [selectedArtist, artists]);
 
   async function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
     if (!user) {
@@ -156,6 +156,7 @@ export function SongRequestDialog() {
     suggestionForm.reset();
     setIsOpen(false);
   }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -231,7 +232,7 @@ export function SongRequestDialog() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a song" />
-                          </SelectTrigger>
+                          </Trigger>
                         </FormControl>
                         <SelectContent>
                           {songs.map(song => (
