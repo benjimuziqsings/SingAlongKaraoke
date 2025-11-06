@@ -38,7 +38,7 @@ export function useCatalog(): UseCatalogResult {
           const artistsList: Artist[] = await Promise.all(
             artistsSnapshot.docs.map(async (artistDoc) => {
               const artistData = artistDoc.data();
-              const songsCollectionRef = collection(artistDoc.ref, 'songs');
+               const songsCollectionRef = collection(artistDoc.ref, 'songs');
               const songsSnapshot = await getDocs(songsCollectionRef);
               
               const songs: CatalogSong[] = songsSnapshot.docs.map(songDoc => ({
