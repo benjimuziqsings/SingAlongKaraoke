@@ -324,7 +324,7 @@ export function SongRequestDialog() {
                       <FormLabel>Special Announcement (Optional)</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="e.g., This one's for my friends!"
+                          placeholder="e.g., This one\'s for my friends!"
                           {...field}
                         />
                       </FormControl>
