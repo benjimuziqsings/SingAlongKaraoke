@@ -54,7 +54,8 @@ export function useQueue(): UseQueueResult {
       const key = `${song.title}-${song.artist}`;
       if (!acc[key]) {
         acc[key] = {
-          id: song.id,
+          id: song.id, // Use first song's ID for operations like 'play next'
+          groupedId: key, // Stable ID for React keys
           title: song.title,
           artist: song.artist,
           status: song.status,
@@ -67,7 +68,14 @@ export function useQueue(): UseQueueResult {
       const requester: RequesterInfo = {
         singer: song.singer,
         announcement: song.announcement,
+        originalId: song.id, // Keep track of the original doc ID
       };
+       // Take the sortOrder and isLocked from the most recent request in a group
+      if (song.createdAt > acc[key].createdAt) {
+        acc[key].sortOrder = song.sortOrder;
+        acc[key].isLocked = song.isLocked;
+        acc[key].createdAt = song.createdAt;
+      }
       acc[key].requesters.push(requester);
       return acc;
     }, {} as Record<string, GroupedSong>);
