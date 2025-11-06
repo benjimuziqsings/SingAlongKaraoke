@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "SongRequest": {
@@ -38,14 +39,6 @@
           "type": "string",
           "description": "The status of the song request such as 'queued', 'playing', 'finished', or 'removed'.",
           "enum": ["queued", "playing", "finished", "removed"]
-        },
-        "isLocked": {
-            "type": "boolean",
-            "description": "Indicates if the song is locked in the queue."
-        },
-        "sortOrder": {
-            "type": "number",
-            "description": "The order of the song in the queue."
         }
       },
       "required": [
@@ -55,9 +48,7 @@
         "requestTime",
         "singer",
         "patronId",
-        "status",
-        "isLocked",
-        "sortOrder"
+        "status"
       ]
     },
     "Patron": {
