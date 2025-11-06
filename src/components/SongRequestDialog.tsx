@@ -99,7 +99,7 @@ export function SongRequestDialog() {
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists]);
+  }, [selectedArtist, artists, catalogForm]);
 
   async function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
     if (!user) {
