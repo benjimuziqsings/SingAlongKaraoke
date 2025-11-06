@@ -43,7 +43,7 @@ export function useCatalog(): UseCatalogResult {
               
               const songs: CatalogSong[] = songsSnapshot.docs.map(songDoc => ({
                 id: songDoc.id,
-                ...songDoc.data(),
+                ...(songDoc.data() as Omit<CatalogSong, 'id'>),
               }));
 
               return {
