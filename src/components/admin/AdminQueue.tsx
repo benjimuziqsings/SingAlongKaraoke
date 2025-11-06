@@ -18,10 +18,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, Lock, Unlock, MessageSquare, ArrowUp, ArrowDown } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, MessageSquare } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -41,36 +40,43 @@ export function AdminQueue() {
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
+        if (!firestore) return;
         const batch = writeBatch(firestore);
         
         // 1. Find the current 'playing' song and set it to 'finished'
         const playingQuery = query(collection(firestore, 'song_requests'), where('status', '==', 'playing'));
-        const playingSnapshot = await getDocs(playingQuery);
-        playingSnapshot.forEach(doc => {
-            batch.update(doc.ref, { status: 'finished' });
-        });
+        try {
+          const playingSnapshot = await getDocs(playingQuery);
+          playingSnapshot.forEach(doc => {
+              batch.update(doc.ref, { status: 'finished' });
+          });
 
-        // 2. Set the new song to 'playing'
-        song.requesters.forEach(requester => {
-          if (!requester.originalId) return;
-          const songRef = doc(firestore, 'song_requests', requester.originalId);
-          batch.update(songRef, { status: 'playing' });
-        });
+          // 2. Set the new song to 'playing'
+          song.requesters.forEach(requester => {
+            if (!requester.originalId) return;
+            const songRef = doc(firestore, 'song_requests', requester.originalId);
+            batch.update(songRef, { status: 'playing' });
+          });
 
-        await batch.commit().catch(error => {
-          errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: song.id,
-              operation: 'write',
-            })
-          )
-        });
+          await batch.commit();
 
-        toast({
-            title: 'Now Playing!',
-            description: `"${song.title}" by ${song.artist} is up next.`,
-        });
+          toast({
+              title: 'Now Playing!',
+              description: `"${song.title}" by ${song.artist} is up next.`,
+          });
+        } catch(error) {
+          console.error("Error playing next song:", error);
+          const permissionError = new FirestorePermissionError({
+            path: song.requesters[0]?.originalId || 'song_requests',
+            operation: 'write',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not update the queue. Please check permissions.',
+          });
+        }
     });
   };
 
@@ -86,67 +92,6 @@ export function AdminQueue() {
         title: 'Song Removed',
         description: `"${song.title}" has been removed from the queue.`,
       });
-    });
-  };
-
-  const handleToggleLock = (song: GroupedSong) => {
-    startTransition(() => {
-      song.requesters.forEach(requester => {
-        if (!requester.originalId) return;
-        const songRef = doc(firestore, 'song_requests', requester.originalId);
-        updateDocumentNonBlocking(songRef, { isLocked: !song.isLocked });
-      });
-      toast({
-        title: `Song ${song.isLocked ? 'Unlocked' : 'Locked'}`,
-        description: `"${song.title}" has been ${song.isLocked ? 'unlocked' : 'locked'}.`,
-      });
-    });
-  };
-  
-  const handleMove = async (groupedSongId: string, direction: 'up' | 'down') => {
-    const currentIndex = upcomingSongs.findIndex(s => s.groupedId === groupedSongId);
-    if (currentIndex === -1) return;
-
-    if (direction === 'up' && currentIndex === 0) return;
-    if (direction === 'down' && currentIndex === upcomingSongs.length - 1) return;
-
-    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-    const currentSong = upcomingSongs[currentIndex];
-    const swapSong = upcomingSongs[swapIndex];
-
-    if(!currentSong.sortOrder || !swapSong.sortOrder) return;
-
-    const batch = writeBatch(firestore);
-
-    // Update all original documents for the current song
-    currentSong.requesters.forEach(r => {
-      if(r.originalId) {
-        const docRef = doc(firestore, 'song_requests', r.originalId);
-        batch.update(docRef, { sortOrder: swapSong.sortOrder });
-      }
-    });
-
-    // Update all original documents for the swap song
-    swapSong.requesters.forEach(r => {
-      if(r.originalId) {
-        const docRef = doc(firestore, 'song_requests', r.originalId);
-        batch.update(docRef, { sortOrder: currentSong.sortOrder });
-      }
-    });
-
-    await batch.commit();
-  }
-
-  const handleMoveUp = (song: GroupedSong) => {
-    startTransition(() => {
-      handleMove(song.groupedId, 'up');
-    });
-  };
-
-  const handleMoveDown = (song: GroupedSong) => {
-    startTransition(() => {
-      handleMove(song.groupedId, 'down');
     });
   };
 
@@ -175,11 +120,10 @@ export function AdminQueue() {
             </TableHeader>
             <TableBody>
               {upcomingSongs.map((song, index) => (
-                <TableRow key={song.groupedId} className={cn("group", song.isLocked && "bg-muted/30")}>
+                <TableRow key={song.groupedId} className="group">
                   <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                   <TableCell>
                     <div className="font-medium flex items-center gap-2">
-                      {song.isLocked && <Lock className="h-4 w-4 text-accent" />}
                       {song.title}
                     </div>
                     <div className="text-sm text-muted-foreground">{song.artist}</div>
@@ -221,26 +165,6 @@ export function AdminQueue() {
                       size="icon"
                       variant="ghost"
                       className="text-muted-foreground hover:text-primary"
-                      onClick={() => handleMoveUp(song)}
-                      disabled={isPending || index === 0}
-                      aria-label="Move Up"
-                    >
-                      <ArrowUp className="h-5 w-5" />
-                    </Button>
-                     <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-primary"
-                      onClick={() => handleMoveDown(song)}
-                      disabled={isPending || index === upcomingSongs.length - 1}
-                      aria-label="Move Down"
-                    >
-                      <ArrowDown className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-primary"
                       onClick={() => handlePlayNext(song)}
                       disabled={isPending}
                       aria-label="Play next"
@@ -256,16 +180,6 @@ export function AdminQueue() {
                        aria-label="Remove song"
                     >
                       <Trash2 className="h-5 w-5" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className={cn("text-muted-foreground hover:text-accent", song.isLocked && "text-accent")}
-                        onClick={() => handleToggleLock(song)}
-                        disabled={isPending}
-                        aria-label={song.isLocked ? 'Unlock song' : 'Lock song'}
-                    >
-                        {song.isLocked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                     </Button>
                   </TableCell>
                 </TableRow>

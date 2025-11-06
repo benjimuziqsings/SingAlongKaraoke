@@ -10,15 +10,13 @@ export type SongStatus = 'queued' | 'playing' | 'finished' | 'removed';
 
 export type Song = {
   id: string;
-  title: string;
-  artist: string;
+  songTitle: string;
+  artistName: string;
   singer: string;
-  announcement?: string;
+  specialAnnouncement?: string;
   status: SongStatus;
-  createdAt: number;
+  requestTime: number;
   patronId: string;
-  isLocked: boolean;
-  sortOrder: number;
 };
 
 export type GroupedSong = {
@@ -28,9 +26,7 @@ export type GroupedSong = {
   artist: string;
   requesters: RequesterInfo[];
   status: SongStatus;
-  createdAt: number;
-  isLocked?: boolean;
-  sortOrder?: number;
+  requestTime: number;
 };
 
 export type Review = {
