@@ -113,7 +113,7 @@ export function SongRequestDialog() {
         songTitle: values.title,
         specialAnnouncement: values.announcement || '',
         requestTime: Date.now(),
-        status: 'queued',
+        status: 'queued' as 'queued',
         patronId: user.uid,
     };
 
@@ -141,7 +141,7 @@ export function SongRequestDialog() {
         songTitle: values.title,
         specialAnnouncement: values.announcement || '',
         requestTime: Date.now(),
-        status: 'queued',
+        status: 'queued' as 'queued',
         patronId: user.uid,
         tip: values.tip,
     };
