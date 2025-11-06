@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "SongRequest": {
@@ -38,7 +37,12 @@
         "status": {
           "type": "string",
           "description": "The status of the song request such as 'queued', 'playing', 'finished', or 'removed'.",
-          "enum": ["queued", "playing", "finished", "removed"]
+          "enum": [
+            "queued",
+            "playing",
+finished",
+            "removed"
+          ]
         }
       },
       "required": [
@@ -64,11 +68,27 @@
         "displayName": {
           "type": "string",
           "description": "The display name of the patron."
+        },
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "telephone": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
         }
       },
       "required": [
         "id",
-        "displayName"
+        "displayName",
+        "name",
+        "email",
+        "username"
       ]
     },
     "Tip": {
@@ -108,41 +128,72 @@
       "type": "object",
       "description": "Represents an artist in the karaoke catalog.",
       "properties": {
-        "name": { "type": "string" },
-        "isAvailable": { "type": "boolean" }
+        "name": {
+          "type": "string"
+        },
+        "isAvailable": {
+          "type": "boolean"
+        }
       },
-      "required": ["name", "isAvailable"]
+      "required": [
+        "name",
+        "isAvailable"
+      ]
     },
     "CatalogSong": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "CatalogSong",
-        "type": "object",
-        "description": "Represents a song within an artist's catalog.",
-        "properties": {
-            "title": { "type": "string" },
-            "lyrics": { "type": "string" },
-            "isAvailable": { "type": "boolean" }
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CatalogSong",
+      "type": "object",
+      "description": "Represents a song within an artist's catalog.",
+      "properties": {
+        "title": {
+          "type": "string"
         },
-        "required": ["title", "isAvailable"]
+        "lyrics": {
+          "type": "string"
+        },
+        "isAvailable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title",
+        "isAvailable"
+      ]
     },
     "Review": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Review",
-        "type": "object",
-        "description": "Represents a review submitted by a patron.",
-        "properties": {
-            "name": { "type": "string" },
-            "rating": { "type": "number" },
-            "comment": { "type": "string" },
-            "createdAt": { "type": "number" }
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Review",
+      "type": "object",
+      "description": "Represents a review submitted by a patron.",
+      "properties": {
+        "name": {
+          "type": "string"
         },
-        "required": ["name", "rating", "comment", "createdAt"]
+        "rating": {
+          "type": "number"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "rating",
+        "comment",
+        "createdAt"
+      ]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com",
+      "facebook.com"
     ]
   },
   "firestore": {
@@ -167,7 +218,7 @@
           "description": "A global collection of all song requests from all patrons."
         }
       },
-       {
+      {
         "path": "/artists/{artistId}",
         "definition": {
           "entityName": "Artist",
@@ -190,11 +241,11 @@
       {
         "path": "/reviews/{reviewId}",
         "definition": {
-            "entityName": "Review",
-            "schema": {
-                "$ref": "#/backend/entities/Review"
-            },
-            "description": "A global collection for all patron reviews."
+          "entityName": "Review",
+          "schema": {
+            "$ref": "#/backend/entities/Review"
+          },
+          "description": "A global collection for all patron reviews."
         }
       }
     ]

@@ -1,34 +1,48 @@
-
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
 import { FirebaseProvider, useUser, useAuth } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { initiateAnonymousSignIn } from './non-blocking-login';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+const AUTH_ROUTES = ['/'];
+const PUBLIC_ROUTES = ['/']; // Or any other public routes
+
 function AuthHandler({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
-    // If the user state is done loading and there is no user, sign in anonymously.
-    if (!isUserLoading && !user) {
-      initiateAnonymousSignIn(auth);
+    if (isUserLoading) return; // Wait for user status to be confirmed
+
+    const isAuthRoute = AUTH_ROUTES.includes(pathname);
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+    if (user && isAuthRoute) {
+      router.push('/home'); // Redirect logged-in users from auth pages to home
+    } else if (!user && !isPublicRoute) {
+      router.push('/'); // Redirect unauthenticated users from protected pages to login
     }
-  }, [isUserLoading, user, auth]);
+  }, [isUserLoading, user, pathname, router]);
+
+  if (isUserLoading) {
+    // You can return a global loading spinner here
+    return <div>Loading...</div>;
+  }
 
   return <>{children}</>;
 }
 
+
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []); 
 
   return (
     <FirebaseProvider

@@ -8,7 +8,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <header className="py-3 px-4 md:px-6 border-b border-border/50 sticky top-0 bg-background/80 backdrop-blur-sm z-20">
       <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/home" className="flex items-center gap-3 group">
           <div className="p-2 bg-primary/20 rounded-lg group-hover:bg-primary/30 transition-colors">
             <Mic className="text-primary h-6 w-6" />
           </div>
@@ -26,7 +26,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
             {isAdmin && <QRCodeDialog />}
           <Button asChild variant="ghost" size="sm">
             {isAdmin ? (
-              <Link href="/">
+              <Link href="/home">
                 <Users className="mr-2 h-4 w-4" />
                 Patron View
               </Link>
