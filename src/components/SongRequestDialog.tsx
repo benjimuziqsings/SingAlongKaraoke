@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -99,7 +99,7 @@ export function SongRequestDialog() {
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists, catalogForm]);
+  }, [selectedArtist, artists]);
 
   async function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
     if (!user) {
@@ -156,7 +156,6 @@ export function SongRequestDialog() {
     suggestionForm.reset();
     setIsOpen(false);
   }
-
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
