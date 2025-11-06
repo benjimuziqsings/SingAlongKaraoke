@@ -8,9 +8,6 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CatalogManagement } from '@/components/admin/CatalogManagement';
-import { useQueue } from '@/hooks/useQueue';
-import { useCatalog } from '@/hooks/useCatalog';
-
 
 function AdminLoadingSkeleton() {
   return (
@@ -22,10 +19,6 @@ function AdminLoadingSkeleton() {
 }
 
 export default function AdminPage() {
-    const { nowPlaying, upcoming, isLoading: isQueueLoading } = useQueue();
-    const { artists, isLoading: isCatalogLoading } = useCatalog();
-
-
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header isAdmin />
@@ -40,15 +33,13 @@ export default function AdminPage() {
               <TabsTrigger value="catalog">Catalog Management</TabsTrigger>
             </TabsList>
             <TabsContent value="queue">
-              {isQueueLoading ? <AdminLoadingSkeleton /> : (
                 <div className="space-y-8">
-                  <AdminNowPlaying nowPlaying={nowPlaying} />
-                  <AdminQueue upcomingSongs={upcoming} />
+                  <AdminNowPlaying />
+                  <AdminQueue />
                 </div>
-              )}
             </TabsContent>
             <TabsContent value="catalog">
-              <CatalogManagement artists={artists} isLoading={isCatalogLoading} />
+              <CatalogManagement />
             </TabsContent>
           </Tabs>
         </Suspense>
@@ -56,5 +47,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    

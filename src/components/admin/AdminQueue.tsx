@@ -28,16 +28,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useQueue } from '@/hooks/useQueue';
+import { Skeleton } from '../ui/skeleton';
+import { FirestorePermissionError, errorEmitter } from '@/firebase';
 
 
-type AdminQueueProps = {
-  upcomingSongs: GroupedSong[];
-};
-
-export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
+export function AdminQueue() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { upcoming: upcomingSongs, isLoading } = useQueue();
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
@@ -51,8 +51,11 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
         });
 
         // 2. Set the new song to 'playing'
-        const songRef = doc(firestore, 'song_requests', song.id);
-        batch.update(songRef, { status: 'playing' });
+        song.requesters.forEach(requester => {
+          if (!requester.originalId) return;
+          const songRef = doc(firestore, 'song_requests', requester.originalId);
+          batch.update(songRef, { status: 'playing' });
+        });
 
         await batch.commit().catch(error => {
           errorEmitter.emit(
@@ -73,8 +76,11 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
 
   const handleRemove = (song: GroupedSong) => {
     startTransition(() => {
-      const songRef = doc(firestore, 'song_requests', song.id);
-      updateDocumentNonBlocking(songRef, { status: 'removed' });
+      song.requesters.forEach(requester => {
+        if (!requester.originalId) return;
+        const songRef = doc(firestore, 'song_requests', requester.originalId);
+        updateDocumentNonBlocking(songRef, { status: 'removed' });
+      });
       toast({
         variant: 'destructive',
         title: 'Song Removed',
@@ -85,8 +91,11 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
 
   const handleToggleLock = (song: GroupedSong) => {
     startTransition(() => {
-      const songRef = doc(firestore, 'song_requests', song.id);
-      updateDocumentNonBlocking(songRef, { isLocked: !song.isLocked });
+      song.requesters.forEach(requester => {
+        if (!requester.originalId) return;
+        const songRef = doc(firestore, 'song_requests', requester.originalId);
+        updateDocumentNonBlocking(songRef, { isLocked: !song.isLocked });
+      });
       toast({
         title: `Song ${song.isLocked ? 'Unlocked' : 'Locked'}`,
         description: `"${song.title}" has been ${song.isLocked ? 'unlocked' : 'locked'}.`,
@@ -94,8 +103,8 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
     });
   };
   
-  const handleMove = async (songId: string, direction: 'up' | 'down') => {
-    const currentIndex = upcomingSongs.findIndex(s => s.id === songId);
+  const handleMove = async (groupedSongId: string, direction: 'up' | 'down') => {
+    const currentIndex = upcomingSongs.findIndex(s => s.groupedId === groupedSongId);
     if (currentIndex === -1) return;
 
     if (direction === 'up' && currentIndex === 0) return;
@@ -109,27 +118,41 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
     if(!currentSong.sortOrder || !swapSong.sortOrder) return;
 
     const batch = writeBatch(firestore);
-    const currentSongRef = doc(firestore, 'song_requests', currentSong.id);
-    const swapSongRef = doc(firestore, 'song_requests', swapSong.id);
-    
-    batch.update(currentSongRef, { sortOrder: swapSong.sortOrder });
-    batch.update(swapSongRef, { sortOrder: currentSong.sortOrder });
+
+    // Update all original documents for the current song
+    currentSong.requesters.forEach(r => {
+      if(r.originalId) {
+        const docRef = doc(firestore, 'song_requests', r.originalId);
+        batch.update(docRef, { sortOrder: swapSong.sortOrder });
+      }
+    });
+
+    // Update all original documents for the swap song
+    swapSong.requesters.forEach(r => {
+      if(r.originalId) {
+        const docRef = doc(firestore, 'song_requests', r.originalId);
+        batch.update(docRef, { sortOrder: currentSong.sortOrder });
+      }
+    });
 
     await batch.commit();
   }
 
   const handleMoveUp = (song: GroupedSong) => {
     startTransition(() => {
-      handleMove(song.id, 'up');
+      handleMove(song.groupedId, 'up');
     });
   };
 
   const handleMoveDown = (song: GroupedSong) => {
     startTransition(() => {
-      handleMove(song.id, 'down');
+      handleMove(song.groupedId, 'down');
     });
   };
 
+  if (isLoading) {
+    return <Skeleton className="h-96 w-full" />
+  }
 
   return (
     <Card>
@@ -152,7 +175,7 @@ export function AdminQueue({ upcomingSongs }: AdminQueueProps) {
             </TableHeader>
             <TableBody>
               {upcomingSongs.map((song, index) => (
-                <TableRow key={song.id} className={cn("group", song.isLocked && "bg-muted/30")}>
+                <TableRow key={song.groupedId} className={cn("group", song.isLocked && "bg-muted/30")}>
                   <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                   <TableCell>
                     <div className="font-medium flex items-center gap-2">

@@ -21,6 +21,7 @@ import { Skeleton } from '../ui/skeleton';
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useCatalog } from '@/hooks/useCatalog';
 
 
 const artistSchema = z.object({
@@ -39,12 +40,8 @@ const lyricsSchema = z.object({
   lyrics: z.string().min(1, 'Lyrics are required'),
 });
 
-type CatalogManagementProps = {
-  artists: Artist[];
-  isLoading: boolean;
-};
-
-export function CatalogManagement({ artists, isLoading }: CatalogManagementProps) {
+export function CatalogManagement() {
+  const { artists, isLoading } = useCatalog();
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);

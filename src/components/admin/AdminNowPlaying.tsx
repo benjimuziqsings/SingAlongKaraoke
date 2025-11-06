@@ -2,7 +2,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import type { GroupedSong } from '@/lib/types';
+import { GroupedSong } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Mic2, Music, Users, MessageSquare } from 'lucide-react';
@@ -21,22 +21,25 @@ import {
 import { useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useQueue } from '@/hooks/useQueue';
+import { Skeleton } from '../ui/skeleton';
 
 
-type AdminNowPlayingProps = {
-  nowPlaying: GroupedSong | null;
-};
-
-export function AdminNowPlaying({ nowPlaying }: AdminNowPlayingProps) {
+export function AdminNowPlaying() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { nowPlaying, isLoading } = useQueue();
 
   const handleFinishSong = () => {
     if (!nowPlaying) return;
     startTransition(() => {
-      const songRef = doc(firestore, 'song_requests', nowPlaying.id);
-      updateDocumentNonBlocking(songRef, { status: 'finished' });
+      nowPlaying.requesters.forEach(requester => {
+        if (!requester.originalId) return;
+        const songRef = doc(firestore, 'song_requests', requester.originalId);
+        updateDocumentNonBlocking(songRef, { status: 'finished' });
+      });
+      
       toast({
         title: 'Song Finished',
         description: `"${nowPlaying.title}" has been marked as finished.`,
@@ -45,6 +48,10 @@ export function AdminNowPlaying({ nowPlaying }: AdminNowPlayingProps) {
   };
 
   const hasAnnouncements = nowPlaying?.requesters.some(r => r.announcement);
+
+  if (isLoading) {
+    return <Skeleton className="h-48 w-full" />
+  }
 
   return (
     <Card className="bg-primary/10 border-primary/50">
