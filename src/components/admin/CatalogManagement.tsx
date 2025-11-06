@@ -258,7 +258,7 @@ export function CatalogManagement() {
               </div>
               <AccordionContent>
                 <div className="space-y-2 pl-4">
-                  {artist.songs.sort((a,b) => a.title.localeCompare(b.title)).map((song) => (
+                  {artist.songs && artist.songs.sort((a,b) => a.title.localeCompare(b.title)).map((song) => (
                     <div key={song.id} className={cn("flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group", !song.isAvailable && "opacity-50")}>
                       <div className="flex items-center gap-2">
                         <Music className="h-4 w-4 text-primary" />
@@ -298,7 +298,7 @@ export function CatalogManagement() {
                       </div>
                     </div>
                   ))}
-                  {artist.songs.length === 0 && (
+                  {artist.songs && artist.songs.length === 0 && (
                     <p className="text-sm text-muted-foreground p-2">No songs for this artist yet.</p>
                   )}
                   <Button variant="outline" size="sm" className="mt-2" onClick={() => openSongDialog(artist)}>

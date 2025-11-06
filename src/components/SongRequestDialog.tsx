@@ -6,8 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { Artist } from '@/lib/karaoke-catalog';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -66,7 +65,7 @@ export function SongRequestDialog() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const artists = allArtists.filter(artist => artist.isAvailable && artist.songs.some(s => s.isAvailable));
+  const artists = allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable));
 
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
@@ -94,7 +93,7 @@ export function SongRequestDialog() {
   useEffect(() => {
     if (selectedArtist) {
       const artistData = artists.find(a => a.name === selectedArtist);
-      const availableSongs = artistData?.songs.filter(s => s.isAvailable) || [];
+      const availableSongs = artistData?.songs?.filter(s => s.isAvailable) || [];
       setSongs(availableSongs);
       catalogForm.resetField('title');
     } else {
@@ -110,13 +109,11 @@ export function SongRequestDialog() {
     
     const songData = {
         singer: values.singer,
-        artist: values.artist,
-        title: values.title,
-        announcement: values.announcement || '',
-        createdAt: Date.now(),
+        artistName: values.artist,
+        songTitle: values.title,
+        specialAnnouncement: values.announcement || '',
+        requestTime: Date.now(),
         status: 'queued',
-        isLocked: false,
-        sortOrder: Date.now(),
         patronId: user.uid,
     };
 
@@ -140,13 +137,11 @@ export function SongRequestDialog() {
     // In a real app, you'd also handle the payment flow here.
     const songData = {
         singer: values.singer,
-        artist: values.artist,
-        title: values.title,
-        announcement: values.announcement || '',
-        createdAt: Date.now(),
+        artistName: values.artist,
+        songTitle: values.title,
+        specialAnnouncement: values.announcement || '',
+        requestTime: Date.now(),
         status: 'queued',
-        isLocked: false,
-        sortOrder: Date.now(),
         patronId: user.uid,
         tip: values.tip,
     };

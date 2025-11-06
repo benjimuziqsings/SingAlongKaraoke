@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
-import { Artist, CatalogSong } from '@/lib/karaoke-catalog';
+import { collection, onSnapshot, getDocs, query } from 'firebase/firestore';
+import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
 
 export interface UseCatalogResult {
   artists: Artist[];
@@ -20,62 +20,60 @@ export function useCatalog(): UseCatalogResult {
 
   const artistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'artists');
+    // We create a stable query reference here.
+    return query(collection(firestore, 'artists'));
   }, [firestore]);
 
   useEffect(() => {
     if (!artistsQuery) {
+      // If there's no firestore instance yet, do nothing.
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
+    
+    // onSnapshot listens for real-time updates to the 'artists' collection.
+    const unsubscribe = onSnapshot(artistsQuery, async (snapshot) => {
+      try {
+        // Map over each artist document to fetch its 'songs' sub-collection.
+        const artistsData = await Promise.all(snapshot.docs.map(async (artistDoc) => {
+          const songsCollectionRef = collection(artistDoc.ref, 'songs');
+          const songsSnapshot = await getDocs(songsCollectionRef);
+          
+          const songs = songsSnapshot.docs.map(songDoc => ({
+            id: songDoc.id,
+            ...songDoc.data(),
+          } as CatalogSong));
+          
+          return {
+            id: artistDoc.id,
+            ...artistDoc.data(),
+            songs: songs,
+          } as Artist;
+        }));
 
-    const unsubscribe = onSnapshot(
-      artistsQuery,
-      async (artistsSnapshot) => {
-        try {
-          const artistsList: Artist[] = await Promise.all(
-            artistsSnapshot.docs.map(async (artistDoc) => {
-              const artistData = artistDoc.data();
-               const songsCollectionRef = collection(artistDoc.ref, 'songs');
-              const songsSnapshot = await getDocs(songsCollectionRef);
-              
-              const songs: CatalogSong[] = songsSnapshot.docs.map(songDoc => ({
-                id: songDoc.id,
-                ...(songDoc.data() as Omit<CatalogSong, 'id'>),
-              }));
-
-              return {
-                id: artistDoc.id,
-                name: artistData.name,
-                isAvailable: artistData.isAvailable,
-                songs: songs,
-              };
-            })
-          );
-
-          // Sort artists alphabetically
-          artistsList.sort((a, b) => a.name.localeCompare(b.name));
-
-          setArtists(artistsList);
-          setError(null);
-        } catch (e: any) {
-          console.error("Error processing catalog snapshot:", e);
-          setError(e);
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Error fetching artists collection:', err);
-        setError(err);
+        // Sort artists alphabetically by name before updating state.
+        artistsData.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setArtists(artistsData);
+        setError(null);
+      } catch (e: any) {
+        console.error("Error processing catalog snapshot:", e);
+        setError(e);
+      } finally {
         setIsLoading(false);
       }
-    );
+    }, (err) => {
+      // This is the error callback for onSnapshot.
+      console.error("Error fetching artists collection:", err);
+      setError(err);
+      setIsLoading(false);
+    });
 
+    // Cleanup function to unsubscribe from the listener when the component unmounts.
     return () => unsubscribe();
-  }, [artistsQuery]);
+  }, [artistsQuery]); // This effect re-runs only if the artistsQuery reference changes.
 
   return { artists, isLoading, error };
 }
