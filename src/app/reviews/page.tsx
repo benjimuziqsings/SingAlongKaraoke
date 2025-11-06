@@ -1,14 +1,16 @@
 
 'use client';
 
-import { getReviews } from '@/lib/actions';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Star, UserCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Review } from '@/lib/types';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+
 
 function ReviewsLoadingSkeleton() {
     return (
@@ -37,29 +39,20 @@ export default function ReviewsPage() {
 }
 
 function ReviewsList() {
-    const [reviews, setReviews] = useState<Review[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchReviews() {
-            setIsLoading(true);
-            const result = await getReviews();
-            if (result.reviews) {
-              setReviews(result.reviews);
-            }
-            setIsLoading(false);
-        }
-        fetchReviews();
-    }, []);
-
-
+    const firestore = useFirestore();
+    const reviewsQuery = useMemoFirebase(() => 
+        query(collection(firestore, 'reviews'), orderBy('createdAt', 'desc')), 
+        [firestore]
+    );
+    const { data: reviews, isLoading } = useCollection<Review>(reviewsQuery);
+    
     if (isLoading) {
         return <ReviewsLoadingSkeleton />;
     }
 
     return (
         <div className="space-y-6">
-            {reviews.length > 0 ? (
+            {reviews && reviews.length > 0 ? (
                 reviews.map(review => (
                     <Card key={review.id}>
                         <CardHeader>
@@ -70,7 +63,7 @@ function ReviewsList() {
                                         {review.name}
                                     </CardTitle>
                                     <CardDescription>
-                                        {formatDistanceToNow(review.createdAt, { addSuffix: true })}
+                                        {review.createdAt ? formatDistanceToNow(review.createdAt, { addSuffix: true }) : 'just now'}
                                     </CardDescription>
                                 </div>
                                 <div className="flex items-center gap-1">

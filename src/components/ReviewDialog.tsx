@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addReview } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +33,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MessageSquarePlus, Star } from 'lucide-react';
-import { Label } from './ui/label';
 
 const reviewSchema = z.object({
   name: z.string().min(1, { message: 'Your name is required.' }),
@@ -42,6 +43,8 @@ const reviewSchema = z.object({
 export function ReviewDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const form = useForm<z.infer<typeof reviewSchema>>({
     resolver: zodResolver(reviewSchema),
     defaultValues: {
@@ -52,27 +55,25 @@ export function ReviewDialog() {
   });
 
   async function onSubmit(values: z.infer<typeof reviewSchema>) {
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
-
-    const result = await addReview(formData);
-
-    if (result.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-    } else {
-      toast({
-        title: 'Review Submitted!',
-        description: 'Thanks for your feedback!',
-      });
-      form.reset();
-      setIsOpen(false);
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot connect to the database.' });
+      return;
     }
+    
+    const reviewData = {
+      ...values,
+      createdAt: Date.now(),
+    };
+
+    const reviewsCol = collection(firestore, 'reviews');
+    addDocumentNonBlocking(reviewsCol, reviewData);
+    
+    toast({
+      title: 'Review Submitted!',
+      description: 'Thanks for your feedback!',
+    });
+    form.reset();
+    setIsOpen(false);
   }
 
   return (
@@ -147,7 +148,6 @@ export function ReviewDialog() {
                       placeholder="Tell us about your experience..."
                       {...field}
                     />
-
                   </FormControl>
                   <FormMessage />
                 </FormItem>
