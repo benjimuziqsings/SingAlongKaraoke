@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
@@ -28,7 +29,7 @@ function AuthHandler({ children }: { children: ReactNode }) {
     } else if (!user && !isPublicRoute) {
       router.push('/'); // Redirect unauthenticated users from protected pages to login
     }
-  }, [isUserLoading, user, pathname, router]);
+  }, [isUserLoading, user, pathname]);
 
   if (isUserLoading) {
     // You can return a global loading spinner here
