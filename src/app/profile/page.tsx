@@ -119,9 +119,9 @@ export default function ProfilePage() {
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    values: {
-      displayName: user?.displayName || '',
-      email: user?.email || '',
+    defaultValues: {
+      displayName: '',
+      email: '',
       telephone: ''
     }
   });
@@ -137,6 +137,10 @@ export default function ProfilePage() {
   }, [user, firestore]);
 
   useEffect(() => {
+    if (user) {
+        profileForm.setValue('displayName', user.displayName || '');
+        profileForm.setValue('email', user.email || '');
+    }
     if (patronDocRef) {
       getDoc(patronDocRef).then(docSnap => {
         if (docSnap.exists()) {
@@ -144,10 +148,6 @@ export default function ProfilePage() {
           profileForm.setValue('telephone', patronData.telephone || '');
         }
       });
-    }
-    if (user) {
-        profileForm.setValue('displayName', user.displayName || '');
-        profileForm.setValue('email', user.email || '');
     }
   }, [patronDocRef, user, profileForm]);
 
