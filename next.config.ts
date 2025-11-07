@@ -38,8 +38,7 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    // This is required to allow requests from the development environment's hostname.
-    // allowedDevOrigins is now a top-level experimental property
+    // Deprecated: allowedDevOrigins is now a top-level property
   },
   allowedDevOrigins: [
       'https://*.cloudworkstations.dev',
