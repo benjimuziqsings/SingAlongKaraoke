@@ -3,6 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -14,37 +15,66 @@ service cloud.firestore {
     function hasClaim(claim) {
       return isSignedIn() && request.auth.token[claim] == true;
     }
+    
+    function isKJ() {
+        return hasClaim('kj');
+    }
 
+    // Patrons can only read and write to their own profile.
     match /patrons/{patronId} {
       allow read, write: if isOwner(patronId);
     }
     
+    // Song Requests
     match /song_requests/{songRequestId} {
-      allow read, create, update, delete: if isSignedIn();
+      // Any signed-in user can read requests (for the queue display).
+      allow read: if isSignedIn();
+      // Only the user who created the request can create it.
+      allow create: if isOwner(request.resource.data.patronId);
+      // Only the KJ can update the status (e.g., to 'playing' or 'finished').
+      // Owners can't change their own request status.
+      allow update: if isKJ();
+      // Only the KJ or the owner of the request can delete/remove a request.
+      allow delete: if isKJ() || isOwner(resource.data.patronId);
     }
     
-    // This rule allows authenticated users to perform list/write operations like batch deletes.
+    // This rule allows the KJ to perform batch writes (like clearing the queue).
     match /song_requests {
-        allow list, write: if isSignedIn();
+        allow list, write: if isKJ();
     }
 
+    // Artists and Songs catalog
     match /artists/{artistId} {
-      allow read, write: if true;
+      // Anyone can read the catalog.
+      allow read: if true;
+      // Only the KJ can write to the catalog.
+      allow write: if isKJ();
 
       match /songs/{songId} {
-          allow read, write: if true;
+          // Anyone can read songs.
+          allow read: if true;
+          // Only the KJ can write songs.
+          allow write: if isKJ();
       }
     }
     
+    // Reviews
     match /reviews/{reviewId} {
+        // Anyone can read reviews.
         allow read: if true;
+        // Authenticated users can create reviews.
         allow create: if isSignedIn();
+        // Nobody can update or delete reviews once created.
         allow update, delete: if false; 
     }
 
+    // Tips
     match /tips/{tipId} {
-        allow read: if hasClaim('kj');
+        // Only the KJ can see the list of tips.
+        allow read: if isKJ();
+        // Any authenticated user can create a tip.
         allow create: if isSignedIn();
+        // Nobody can update or delete tips.
         allow update, delete: if false;
     }
   }
