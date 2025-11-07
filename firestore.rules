@@ -19,18 +19,16 @@ service cloud.firestore {
 
     // Patrons
     match /patrons/{patronId} {
-      // Users can read their own profile.
-      allow read: if isOwner(patronId);
       // A KJ can read any patron's profile (for the user management list).
-      allow read: if isKJ();
+      // Users can read their own profile.
+      allow read: if isOwner(patronId) || isKJ();
       // Users can update their own profile, but cannot make themselves a KJ.
-      allow write: if isOwner(patronId) && !('isKJ' in request.resource.data);
       // A KJ can update another user's profile (specifically to make them a KJ).
-      allow write: if isKJ();
+      allow write: if (isOwner(patronId) && !('isKJ' in request.resource.data)) || isKJ();
     }
     
     // This rule allows a KJ to list all patrons for the user management UI.
-    match /patrons {
+    match /patrons/{document=**} {
       allow list: if isKJ();
     }
     
@@ -48,7 +46,7 @@ service cloud.firestore {
     }
     
     // This rule allows the KJ to perform batch writes (like clearing the queue).
-    match /song_requests {
+    match /song_requests/{document=**} {
         allow list, write: if isKJ();
     }
 
