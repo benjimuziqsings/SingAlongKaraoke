@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
 import { useUser } from '@/firebase/provider';
@@ -27,10 +27,8 @@ export function useQueue(): UseQueueResult {
   // Memoize the query to prevent re-creating it on every render
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
-    return query(
-      collection(firestore, 'song_requests'),
-      orderBy('requestTime', 'desc')
-    );
+    // The query is simplified to a basic collection read. Ordering is handled client-side.
+    return query(collection(firestore, 'song_requests'));
   }, [firestore, isUserLoading]);
 
   // Use the useCollection hook to get real-time updates
@@ -90,11 +88,11 @@ export function useQueue(): UseQueueResult {
     
     const upcoming = queue
       .filter(song => song.status === 'queued')
-      .sort((a, b) => a.requestTime - b.requestTime);
+      .sort((a, b) => a.requestTime - b.requestTime); // Sort upcoming songs ascending
 
     const history = queue
       .filter(song => song.status === 'finished')
-      .sort((a, b) => b.requestTime - a.requestTime); // Show most recent first
+      .sort((a, b) => b.requestTime - a.requestTime); // Sort history descending
 
     return { nowPlaying, upcoming, history };
   }, [songs]);
