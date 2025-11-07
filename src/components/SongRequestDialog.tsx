@@ -100,7 +100,7 @@ export function SongRequestDialog() {
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists]);
+  }, [selectedArtist]);
 
   useEffect(() => {
     // Pre-fill singer name if user is logged in
