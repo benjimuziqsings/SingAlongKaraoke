@@ -20,7 +20,7 @@ service cloud.firestore {
     }
     
     match /song_requests/{songRequestId} {
-      allow list, get: if isSignedIn();
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
       allow update, delete: if hasClaim('kj');
     }
