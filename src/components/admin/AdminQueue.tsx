@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTransition } from 'react';
@@ -76,7 +77,6 @@ export function AdminQueue() {
               description: `"${song.title}" by ${song.artist} is up next.`,
           });
         } catch(error) {
-          console.error("Error playing next song:", error);
           // Create and emit the contextual error
           const permissionError = new FirestorePermissionError({
             path: `song_requests (batch operation)`,
@@ -84,13 +84,6 @@ export function AdminQueue() {
             requestResourceData: { status: 'playing/finished' }
           });
           errorEmitter.emit('permission-error', permissionError);
-
-          // Also show a generic toast to the user
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not update the queue. Please check permissions.',
-          });
         }
     });
   };
@@ -122,23 +115,36 @@ export function AdminQueue() {
       const q = query(collection(firestore, 'song_requests'), where('status', '==', statusToClear));
       
       try {
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(q).catch(serverError => {
+            const permissionError = new FirestorePermissionError({
+                path: 'song_requests',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
+        });
+
         const batch = writeBatch(firestore);
         querySnapshot.forEach((doc) => {
           batch.delete(doc.ref);
         });
-        await batch.commit();
+        
+        await batch.commit().catch(serverError => {
+            const permissionError = new FirestorePermissionError({
+                path: 'song_requests (batch delete)',
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
+        });
 
         toast({ title: 'Success', description: `The ${listName} has been cleared.` });
         if (refetch) refetch();
 
       } catch (error) {
+        // Errors are now emitted, so we just log for server-side debugging if needed.
+        // No user-facing toast is needed here as the listener will handle it.
         console.error(`Error clearing ${listName}:`, error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: `Could not clear the ${listName}.`,
-        });
       }
     });
   };
