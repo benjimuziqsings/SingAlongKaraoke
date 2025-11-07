@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -115,29 +115,41 @@ export function CatalogManagement() {
     });
   };
   
-  const handleRemoveArtist = async (artistId: string, artistName: string) => {
+  const handleRemoveArtist = (artistId: string, artistName: string) => {
     startTransition(async () => {
       const artistRef = doc(firestore, 'artists', artistId);
       const songsColRef = collection(firestore, 'artists', artistId, 'songs');
       
       const batch = writeBatch(firestore);
       
-      // Delete all songs in the subcollection
-      const songsSnapshot = await getDocs(songsColRef);
+      const songsSnapshot = await getDocs(songsColRef).catch(serverError => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: songsColRef.path,
+          operation: 'list',
+        }));
+        return null;
+      });
+
+      if (!songsSnapshot) return;
+
       songsSnapshot.forEach(songDoc => {
         batch.delete(songDoc.ref);
       });
       
-      // Delete the artist document
       batch.delete(artistRef);
       
-      await batch.commit();
-
-      toast({ title: 'Success', description: `"${artistName}" has been removed.` });
+      batch.commit().then(() => {
+        toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
+      }).catch(serverError => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: artistRef.path,
+            operation: 'delete',
+        }));
+      });
     });
   };
 
-  const handleRemoveSong = async (artistId: string, songId: string, songTitle: string) => {
+  const handleRemoveSong = (artistId: string, songId: string, songTitle: string) => {
     startTransition(() => {
       const songRef = doc(firestore, 'artists', artistId, 'songs', songId);
       deleteDocumentNonBlocking(songRef);
@@ -145,7 +157,7 @@ export function CatalogManagement() {
     });
   };
 
-  const handleToggleArtistAvailability = async (artist: Artist) => {
+  const handleToggleArtistAvailability = (artist: Artist) => {
     startTransition(() => {
       if (!artist.id) return;
       const artistRef = doc(firestore, 'artists', artist.id);
@@ -154,7 +166,7 @@ export function CatalogManagement() {
     });
   };
 
-  const handleToggleSongAvailability = async (artist: Artist, song: CatalogSong) => {
+  const handleToggleSongAvailability = (artist: Artist, song: CatalogSong) => {
     startTransition(() => {
       if (!artist.id || !song.id) return;
       const songRef = doc(firestore, 'artists', artist.id, 'songs', song.id);
@@ -445,4 +457,5 @@ export function CatalogManagement() {
   );
 }
 
+    
     
