@@ -22,24 +22,20 @@ export function useCatalog(): UseCatalogResult {
 
   const artistsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // We create a stable query reference here.
     return query(collection(firestore, 'artists'));
   }, [firestore]);
 
   useEffect(() => {
     if (!artistsQuery) {
-      // If there's no firestore instance yet, do nothing.
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     
-    // onSnapshot listens for real-time updates to the 'artists' collection.
     const unsubscribe = onSnapshot(artistsQuery, async (snapshot) => {
       try {
-        // Map over each artist document to fetch its 'songs' sub-collection.
-        const artistsData = await Promise.all(snapshot.docs.map(async (artistDoc) => {
+        const artistsDataPromises = snapshot.docs.map(async (artistDoc) => {
           const songsCollectionRef = collection(artistDoc.ref, 'songs');
           const songsSnapshot = await getDocs(songsCollectionRef);
           
@@ -48,19 +44,26 @@ export function useCatalog(): UseCatalogResult {
                 id: songDoc.id,
                 ...songDoc.data(),
               } as CatalogSong))
-            : EMPTY_SONGS; // Use the stable empty array reference
+            : EMPTY_SONGS;
           
           return {
             id: artistDoc.id,
             ...artistDoc.data(),
             songs: songs,
           } as Artist;
-        }));
+        });
 
-        // Sort artists alphabetically by name before updating state.
-        artistsData.sort((a, b) => a.name.localeCompare(b.name));
+        const newArtistsData = await Promise.all(artistsDataPromises);
+        newArtistsData.sort((a, b) => a.name.localeCompare(b.name));
         
-        setArtists(artistsData);
+        setArtists(currentArtists => {
+          // A simple JSON.stringify check to prevent re-renders if the data is identical.
+          if (JSON.stringify(currentArtists) === JSON.stringify(newArtistsData)) {
+            return currentArtists;
+          }
+          return newArtistsData;
+        });
+
         setError(null);
       } catch (e: any) {
         console.error("Error processing catalog snapshot:", e);
@@ -69,15 +72,13 @@ export function useCatalog(): UseCatalogResult {
         setIsLoading(false);
       }
     }, (err) => {
-      // This is the error callback for onSnapshot.
       console.error("Error fetching artists collection:", err);
       setError(err);
       setIsLoading(false);
     });
 
-    // Cleanup function to unsubscribe from the listener when the component unmounts.
     return () => unsubscribe();
-  }, [artistsQuery]); // This effect re-runs only if the artistsQuery reference changes.
+  }, [artistsQuery]);
 
   return { artists, isLoading, error };
 }

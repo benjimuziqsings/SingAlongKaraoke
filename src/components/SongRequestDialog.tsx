@@ -98,8 +98,6 @@ export function SongRequestDialog() {
 
 
   const selectedArtist = catalogForm.watch('artist');
-  const { setValue: setCatalogValue, resetField: resetCatalogField } = catalogForm;
-  const { setValue: setSuggestionValue } = suggestionForm;
 
   useEffect(() => {
     if (selectedArtist) {
