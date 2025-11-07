@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, MessageSquare } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, MessageSquare, Loader2 } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import {
@@ -26,15 +25,27 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function AdminQueue() {
   const [isPending, startTransition] = useTransition();
+  const [isClearing, startClearingTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { upcoming: upcomingSongs, nowPlaying, isLoading } = useQueue();
+  const { upcoming: upcomingSongs, history, nowPlaying, isLoading, refetch } = useQueue();
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
@@ -90,6 +101,39 @@ export function AdminQueue() {
       });
     });
   };
+  
+  const handleClearList = (statusToClear: 'queued' | 'finished') => {
+    startClearingTransition(async () => {
+      if (!firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Database not connected.' });
+        return;
+      }
+      
+      const listName = statusToClear === 'queued' ? 'queue' : 'history';
+      const q = query(collection(firestore, 'song_requests'), where('status', '==', statusToClear));
+      
+      try {
+        const querySnapshot = await getDocs(q);
+        const batch = writeBatch(firestore);
+        querySnapshot.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        toast({ title: 'Success', description: `The ${listName} has been cleared.` });
+        if (refetch) refetch();
+
+      } catch (error) {
+        console.error(`Error clearing ${listName}:`, error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `Could not clear the ${listName}.`,
+        });
+      }
+    });
+  };
+
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />
@@ -97,11 +141,57 @@ export function AdminQueue() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="font-headline text-2xl flex items-center gap-3">
           <ListMusic />
           Song Queue
         </CardTitle>
+         <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={upcomingSongs.length === 0 || isClearing}>
+                    {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    Clear Queue
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently clear the entire upcoming song queue. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleClearList('queued')} disabled={isClearing}>
+                    Yes, clear queue
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={history.length === 0 || isClearing}>
+                  {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    Clear History
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently clear the entire song history. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleClearList('finished')} disabled={isClearing}>
+                    Yes, clear history
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+        </div>
       </CardHeader>
       <CardContent>
         {upcomingSongs.length > 0 ? (

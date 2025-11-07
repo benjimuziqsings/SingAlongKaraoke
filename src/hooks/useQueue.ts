@@ -2,11 +2,11 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
 import { useUser } from '@/firebase/provider';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 // Define the structure for the hook's return value
 export interface UseQueueResult {
@@ -15,6 +15,7 @@ export interface UseQueueResult {
   history: GroupedSong[];
   isLoading: boolean;
   error: Error | null;
+  refetch?: () => void; // Optional refetch function
 }
 
 /**
@@ -22,14 +23,51 @@ export interface UseQueueResult {
  */
 export function useQueue(): UseQueueResult {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const [songs, setSongs] = useState<Song[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'song_requests'));
   }, [firestore]);
+
+  const refetch = useCallback(() => {
+    if (!songRequestsQuery) return;
+    const unsubscribe = onSnapshot(songRequestsQuery, (snapshot) => {
+        const fetchedSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
+        setSongs(fetchedSongs);
+        setIsLoading(false);
+    }, (err) => {
+        setError(err);
+        setIsLoading(false);
+    });
+    // Unsubscribe immediately after fetching to perform a one-time refetch.
+    // For real-time updates, you would manage this differently.
+    setTimeout(() => unsubscribe(), 1000); 
+  }, [songRequestsQuery]);
+
+
+  useEffect(() => {
+    if (!songRequestsQuery) {
+        setIsLoading(false);
+        return;
+    }
+
+    setIsLoading(true);
+    const unsubscribe = onSnapshot(songRequestsQuery, (snapshot) => {
+        const fetchedSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
+        setSongs(fetchedSongs);
+        setIsLoading(false);
+    }, (err) => {
+        console.error("Error fetching song requests:", err);
+        setError(err);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [songRequestsQuery]);
   
-  const { data: songs, isLoading, error } = useCollection<Song>(songRequestsQuery);
 
   const { nowPlaying, upcoming, history } = useMemo(() => {
     if (!songs) {
@@ -80,6 +118,5 @@ export function useQueue(): UseQueueResult {
     return { nowPlaying, upcoming, history };
   }, [songs]);
 
-  return { nowPlaying, upcoming, history, isLoading, error };
+  return { nowPlaying, upcoming, history, isLoading, error, refetch };
 }
-
