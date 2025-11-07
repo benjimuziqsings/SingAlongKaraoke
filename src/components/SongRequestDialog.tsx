@@ -106,18 +106,20 @@ export function SongRequestDialog() {
       const artistData = artists.find(a => a.name === selectedArtist);
       const availableSongs = artistData?.songs?.filter(s => s.isAvailable) || [];
       setSongs(availableSongs);
-      resetCatalogField('title');
+      catalogForm.resetField('title');
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists, resetCatalogField]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArtist, artists]);
 
   useEffect(() => {
     if (isOpen && user?.displayName) {
-        setCatalogValue('singer', user.displayName);
-        setSuggestionValue('singer', user.displayName);
+        catalogForm.setValue('singer', user.displayName);
+        suggestionForm.setValue('singer', user.displayName);
     }
-  }, [user, isOpen, setCatalogValue, setSuggestionValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isOpen]);
 
 
   const handleSubmit = (songData: any) => {
