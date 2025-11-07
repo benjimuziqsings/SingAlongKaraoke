@@ -12,17 +12,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    function hasClaim(claim) {
-      return isSignedIn() && request.auth.token[claim] == true;
-    }
-    
+    // Check if the user has the 'isKJ' flag in their patron document.
     function isKJ() {
-        return hasClaim('kj');
+      return isSignedIn() && get(/databases/$(database)/documents/patrons/$(request.auth.uid)).data.isKJ == true;
     }
 
-    // Patrons can only read and write to their own profile.
+    // Patrons
     match /patrons/{patronId} {
-      allow read, write: if isOwner(patronId);
+      // Users can read their own profile.
+      allow read: if isOwner(patronId);
+      // A KJ can read any patron's profile (for the user management list).
+      allow read: if isKJ();
+      // Users can update their own profile, but cannot make themselves a KJ.
+      allow write: if isOwner(patronId) && !('isKJ' in request.resource.data);
+      // A KJ can update another user's profile (specifically to make them a KJ).
+      allow write: if isKJ();
     }
     
     // Song Requests

@@ -83,6 +83,10 @@
         },
         "username": {
           "type": "string"
+        },
+        "isKJ": {
+          "type": "boolean",
+          "description": "Whether the user has Karaoke Jockey (admin) privileges."
         }
       },
       "required": [
