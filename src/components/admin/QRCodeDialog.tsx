@@ -21,9 +21,9 @@ export function QRCodeDialog() {
 
   useEffect(() => {
     // This runs only on the client, after hydration
-    const origin = window.location.origin;
-    setUrl(origin);
-    setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(origin)}`);
+    const publicUrl = `https://the-bailey-collective.web.app`;
+    setUrl(publicUrl);
+    setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicUrl)}`);
   }, []);
 
   return (
