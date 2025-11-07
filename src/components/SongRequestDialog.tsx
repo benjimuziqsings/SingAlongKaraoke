@@ -53,7 +53,7 @@ const suggestionSchema = z.object({
     artist: z.string().min(1, { message: 'Artist name is required.' }),
     title: z.string().min(1, { message: 'Song title is required.' }),
     announcement: z.string().optional(),
-    tip: z.coerce.number().min(5, { message: 'A minimum tip of $5 is required for suggestions.' }),
+    tip: z.coerce.number().min(0).optional(),
 });
 
 export function SongRequestDialog() {
@@ -347,7 +347,7 @@ export function SongRequestDialog() {
                   name="tip"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tip (min. $5 required)</FormLabel>
+                      <FormLabel>Tip (optional)</FormLabel>
                        <FormControl>
                         <div className="relative">
                           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -364,8 +364,8 @@ export function SongRequestDialog() {
                       Cancel
                     </Button>
                   </DialogClose>
-                  <Button type="submit" disabled={suggestionForm.formState.isSubmitting} variant="destructive">
-                    {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest & Tip'}
+                  <Button type="submit" disabled={suggestionForm.formState.isSubmitting}>
+                    {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest Song'}
                   </Button>
                 </DialogFooter>
               </form>
