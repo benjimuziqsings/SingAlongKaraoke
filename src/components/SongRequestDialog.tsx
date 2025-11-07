@@ -242,7 +242,7 @@ export function SongRequestDialog() {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a song" />
-                          </Trigger>
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {songs.map(song => (
