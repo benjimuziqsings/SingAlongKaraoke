@@ -26,12 +26,10 @@ service cloud.firestore {
     }
 
     match /artists/{artistId} {
-      allow read: if true;
-      allow write: if hasClaim('kj');
+      allow read, write: if true;
 
       match /songs/{songId} {
-          allow read: if true;
-          allow write: if hasClaim('kj');
+          allow read, write: if true;
       }
     }
     
