@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Facebook, Mic, User } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { useAuth, initiateAnonymousSignIn, initiateGoogleSignIn, initiateFacebookSignIn } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon() {
   return (
@@ -27,10 +29,15 @@ function GoogleIcon() {
 
 export default function AuthPage() {
   const auth = useAuth();
+  const { toast } = useToast();
 
   const handleSignIn = (provider: 'google' | 'facebook' | 'anonymous') => {
     if (!auth) {
-      console.error('Authentication service not available.');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Authentication service not available.',
+      });
       return;
     }
     switch (provider) {
@@ -105,7 +112,7 @@ export default function AuthPage() {
               <CardDescription>
                 Enter your details below to create your account.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent className="space-y-4">
                 <RegisterForm />
             </CardContent>
