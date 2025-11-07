@@ -105,7 +105,7 @@ export default function AuthPage() {
               <CardDescription>
                 Enter your details below to create your account.
               </CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent className="space-y-4">
                 <RegisterForm />
             </CardContent>
