@@ -67,7 +67,7 @@ export function NowPlaying({ song }: NowPlayingProps) {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground text-lg">The stage is quiet for now...</p>
-              <p>The next singer will be up shortly!</p>
+              <p>Get ready for the next song.</p>
             </div>
           )}
         </CardContent>
