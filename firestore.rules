@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 21: Add KJ role via custom claims for production-ready security.
+ * Version 22: Add review and tip rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -63,11 +63,19 @@ service cloud.firestore {
     }
     
     // Reviews can be read by anyone.
-    // Reviews can only be created by signed-in users.
+    // Reviews can only be created by signed-in users for themselves.
     match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
         allow update, delete: if false; // Reviews are immutable
+    }
+
+    // Tips can be read by the KJ.
+    // Tips can only be created by signed-in users for themselves.
+    match /tips/{tipId} {
+        allow read: if hasClaim('kj');
+        allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
+        allow update, delete: if false;
     }
   }
 }

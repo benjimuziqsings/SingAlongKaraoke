@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser, initiateAnonymousSignIn, useAuth } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
 
@@ -44,17 +44,36 @@ export function ReviewDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
+  const auth = useAuth();
 
   const form = useForm<z.infer<typeof reviewSchema>>({
     resolver: zodResolver(reviewSchema),
     defaultValues: {
-      name: '',
+      name: user?.displayName || '',
       rating: 5,
       comment: '',
     },
   });
 
+  useState(() => {
+    if (user?.displayName) {
+      form.setValue('name', user.displayName);
+    }
+  });
+
   async function onSubmit(values: z.infer<typeof reviewSchema>) {
+    if (!user) {
+        if(auth) {
+            initiateAnonymousSignIn(auth);
+        }
+        toast({
+            title: 'Signing in...',
+            description: 'You need to be signed in to leave a review. We are signing you in. Please try again in a moment.'
+        });
+        return;
+    }
+
     if (!firestore) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot connect to the database.' });
       return;
@@ -63,6 +82,7 @@ export function ReviewDialog() {
     const reviewData = {
       ...values,
       createdAt: Date.now(),
+      patronId: user.uid,
     };
 
     const reviewsCol = collection(firestore, 'reviews');
@@ -72,7 +92,7 @@ export function ReviewDialog() {
       title: 'Review Submitted!',
       description: 'Thanks for your feedback!',
     });
-    form.reset();
+    form.reset({ name: user.displayName || '', rating: 5, comment: '' });
     setIsOpen(false);
   }
 
