@@ -40,7 +40,7 @@
           "enum": [
             "queued",
             "playing",
-finished",
+            "finished",
             "removed"
           ]
         }
