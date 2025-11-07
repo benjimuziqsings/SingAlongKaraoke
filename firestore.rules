@@ -20,9 +20,12 @@ service cloud.firestore {
     }
     
     match /song_requests/{songRequestId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
-      allow update, delete: if hasClaim('kj');
+      allow read, create, update, delete: if isSignedIn();
+    }
+    
+    // This rule allows authenticated users to perform list/write operations like batch deletes.
+    match /song_requests {
+        allow list, write: if isSignedIn();
     }
 
     match /artists/{artistId} {
