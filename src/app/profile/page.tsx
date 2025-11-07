@@ -10,7 +10,7 @@ import { updatePassword } from 'firebase/auth';
 import { doc, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Song, GroupedSong } from '@/lib/types';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,40 +54,47 @@ function UserSongHistory() {
 
   const historyQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // Querying only by patronId, sorting will be done on the client
     return query(
       collection(firestore, 'song_requests'),
-      where('patronId', '==', user.uid),
-      orderBy('requestTime', 'desc')
+      where('patronId', '==', user.uid)
     );
   }, [user, firestore]);
 
   const { data: songs, isLoading } = useCollection<Song>(historyQuery);
+  
+  const groupedHistory: GroupedSong[] = useMemo(() => {
+    if (!songs) return [];
+    
+    const groups = songs.reduce((acc, song) => {
+      const key = `${song.songTitle}-${song.artistName}`;
+      let group = acc.find(g => g.groupedId === key);
+      if (!group) {
+        group = {
+          id: song.id,
+          groupedId: key,
+          title: song.songTitle,
+          artist: song.artistName,
+          status: song.status,
+          requestTime: song.requestTime,
+          requesters: [],
+        };
+        acc.push(group);
+      }
+      group.requesters.push({
+        singer: song.singer,
+        announcement: song.specialAnnouncement,
+        originalId: song.id
+      });
+      if (song.requestTime > group.requestTime) {
+        group.requestTime = song.requestTime;
+      }
+      return acc;
+    }, [] as GroupedSong[]);
 
-  const groupedHistory: GroupedSong[] = songs ? songs.reduce((acc, song) => {
-    const key = `${song.songTitle}-${song.artistName}`;
-    let group = acc.find(g => g.groupedId === key);
-    if (!group) {
-      group = {
-        id: song.id,
-        groupedId: key,
-        title: song.songTitle,
-        artist: song.artistName,
-        status: song.status,
-        requestTime: song.requestTime,
-        requesters: [],
-      };
-      acc.push(group);
-    }
-    group.requesters.push({
-      singer: song.singer,
-      announcement: song.specialAnnouncement,
-      originalId: song.id
-    });
-    if (song.requestTime > group.requestTime) {
-      group.requestTime = song.requestTime;
-    }
-    return acc;
-  }, [] as GroupedSong[]) : [];
+    // Sort the final grouped songs by requestTime
+    return groups.sort((a,b) => b.requestTime - a.requestTime);
+  }, [songs]);
 
 
   if (isLoading) {
