@@ -7,10 +7,10 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useAuth, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { updatePassword } from 'firebase/auth';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Song, GroupedSong } from '@/lib/types';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { History } from 'lucide-react';
 
 
 const profileSchema = z.object({
-  displayName: z.string().min(1, 'Display name is required.'),
+  displayName: z.string(),
   email: z.string().email(),
   telephone: z.string().optional(),
 });
@@ -53,7 +53,7 @@ function UserSongHistory() {
   const firestore = useFirestore();
 
   const historyQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return query(
       collection(firestore, 'song_requests'),
       where('patronId', '==', user.uid),
@@ -122,7 +122,7 @@ export default function ProfilePage() {
     values: {
       displayName: user?.displayName || '',
       email: user?.email || '',
-      telephone: '' // Will be loaded from patron doc
+      telephone: ''
     }
   });
 
@@ -132,12 +132,25 @@ export default function ProfilePage() {
   });
 
   const patronDocRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, 'patrons', user.uid);
   }, [user, firestore]);
 
-  // You would typically fetch the patron document to get additional info like telephone.
-  // For this example, we'll assume it's blank initially.
+  useEffect(() => {
+    if (patronDocRef) {
+      getDoc(patronDocRef).then(docSnap => {
+        if (docSnap.exists()) {
+          const patronData = docSnap.data();
+          profileForm.setValue('telephone', patronData.telephone || '');
+        }
+      });
+    }
+    if (user) {
+        profileForm.setValue('displayName', user.displayName || '');
+        profileForm.setValue('email', user.email || '');
+    }
+  }, [patronDocRef, user, profileForm]);
+
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     if (!user || !patronDocRef) return;

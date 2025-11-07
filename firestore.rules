@@ -1,57 +1,30 @@
 
-/**
- * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 27: Revert song request read rule to a simple, correct state to fix permission error.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the user is signed in.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @param {string} userId - The user ID to compare against the authenticated user's UID.
-     * @return {bool} True if the user is signed in and the UID matches, false otherwise.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    /**
-     * @description Checks if the user has a specific custom claim.
-     * @param {string} claim - The name of the custom claim (e.g., 'kj').
-     * @return {bool} True if the user has the claim and it is true.
-     */
     function hasClaim(claim) {
       return isSignedIn() && request.auth.token[claim] == true;
     }
 
-    // Patrons can only read and write their own profile.
     match /patrons/{patronId} {
       allow read, write: if isOwner(patronId);
     }
     
-    // Rules for the song_requests collection.
     match /song_requests/{songRequestId} {
-      // Any signed-in user can read any document in the queue. This is critical for the app to function.
       allow read: if isSignedIn();
-
-      // Patrons can create their own requests.
-      // The `patronId` in the new document must match the user's own UID.
       allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
-
-      // Only the KJ can update or delete any request. Regular users cannot.
       allow update, delete: if hasClaim('kj');
     }
 
-    // Catalog can be read by anyone.
-    // Catalog can be written to by the KJ.
     match /artists/{artistId} {
       allow read: if true;
       allow write: if hasClaim('kj');
@@ -62,19 +35,15 @@ service cloud.firestore {
       }
     }
     
-    // Reviews can be read by anyone.
-    // Reviews can only be created by signed-in users for themselves.
     match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
-        allow update, delete: if false; // Reviews are immutable
+        allow create: if isSignedIn();
+        allow update, delete: if false; 
     }
 
-    // Tips can be read by the KJ.
-    // Tips can only be created by signed-in users for themselves.
     match /tips/{tipId} {
         allow read: if hasClaim('kj');
-        allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
+        allow create: if isSignedIn();
         allow update, delete: if false;
     }
   }

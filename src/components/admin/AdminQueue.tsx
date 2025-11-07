@@ -77,6 +77,7 @@ export function AdminQueue() {
 
   const handleRemove = (song: GroupedSong) => {
     startTransition(() => {
+      if (!firestore) return;
       song.requesters.forEach(requester => {
         if (!requester.originalId) return;
         const songRef = doc(firestore, 'song_requests', requester.originalId);

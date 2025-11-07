@@ -198,67 +198,41 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/patrons/{patronId}",
-        "definition": {
-          "entityName": "Patron",
-          "schema": {
-            "$ref": "#/backend/entities/Patron"
-          },
-          "description": "Stores patron profiles. `patronId` is equal to `request.auth.uid`."
-        }
+    "/patrons/{patronId}": {
+      "schema": {
+        "$ref": "#/entities/Patron"
       },
-      {
-        "path": "/song_requests/{songRequestId}",
-        "definition": {
-          "entityName": "SongRequest",
-          "schema": {
-            "$ref": "#/backend/entities/SongRequest"
-          },
-          "description": "A global collection of all song requests from all patrons."
-        }
+      "description": "Stores patron profiles. `patronId` is equal to `request.auth.uid`."
+    },
+    "/song_requests/{songRequestId}": {
+      "schema": {
+        "$ref": "#/entities/SongRequest"
       },
-      {
-        "path": "/artists/{artistId}",
-        "definition": {
-          "entityName": "Artist",
-          "schema": {
-            "$ref": "#/backend/entities/Artist"
-          },
-          "description": "The root collection for the karaoke catalog artists."
-        }
+      "description": "A global collection of all song requests from all patrons."
+    },
+    "/artists/{artistId}": {
+      "schema": {
+        "$ref": "#/entities/Artist"
       },
-      {
-        "path": "/artists/{artistId}/songs/{songId}",
-        "definition": {
-          "entityName": "CatalogSong",
-          "schema": {
-            "$ref": "#/backend/entities/CatalogSong"
-          },
-          "description": "Subcollection of songs for a specific artist."
-        }
+      "description": "The root collection for the karaoke catalog artists."
+    },
+    "/artists/{artistId}/songs/{songId}": {
+      "schema": {
+        "$ref": "#/entities/CatalogSong"
       },
-      {
-        "path": "/reviews/{reviewId}",
-        "definition": {
-          "entityName": "Review",
-          "schema": {
-            "$ref": "#/backend/entities/Review"
-          },
-          "description": "A global collection for all patron reviews."
-        }
+      "description": "Subcollection of songs for a specific artist."
+    },
+    "/reviews/{reviewId}": {
+      "schema": {
+        "$ref": "#/entities/Review"
       },
-      {
-        "path": "/tips/{tipId}",
-        "definition": {
-            "entityName": "Tip",
-            "schema": {
-                "$ref": "#/backend/entities/Tip"
-            },
-            "description": "A global collection of all tips."
-        }
-      }
-    ]
+      "description": "A global collection for all patron reviews."
+    },
+    "/tips/{tipId}": {
+      "schema": {
+        "$ref": "#/entities/Tip"
+      },
+      "description": "A global collection of all tips."
+    }
   }
 }
