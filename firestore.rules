@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 26: Drastically simplify song request read rule again to fix persistent permission error.
+ * Version 27: Revert song request read rule to a simple, correct state to fix permission error.
  */
 rules_version = '2';
 service cloud.firestore {

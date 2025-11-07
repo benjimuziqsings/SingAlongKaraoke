@@ -5,7 +5,7 @@ import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { doc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Button } from '@/components/ui/button';
@@ -29,48 +29,43 @@ import {
 } from '@/components/ui/tooltip';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
-import { FirestorePermissionError, errorEmitter } from '@/firebase';
-
 
 export function AdminQueue() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { upcoming: upcomingSongs, isLoading } = useQueue();
+  const { upcoming: upcomingSongs, nowPlaying, isLoading } = useQueue();
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
         if (!firestore) return;
         const batch = writeBatch(firestore);
         
-        // 1. Find the current 'playing' song and set it to 'finished'
-        const playingQuery = query(collection(firestore, 'song_requests'), where('status', '==', 'playing'));
+        // 1. If a song is currently playing, set its status to 'finished'.
+        if (nowPlaying) {
+          nowPlaying.requesters.forEach(requester => {
+            if (requester.originalId) {
+              const oldSongRef = doc(firestore, 'song_requests', requester.originalId);
+              batch.update(oldSongRef, { status: 'finished' });
+            }
+          });
+        }
+
+        // 2. Set the new song's status to 'playing'.
+        song.requesters.forEach(requester => {
+          if (!requester.originalId) return;
+          const newSongRef = doc(firestore, 'song_requests', requester.originalId);
+          batch.update(newSongRef, { status: 'playing' });
+        });
+
         try {
-          const playingSnapshot = await getDocs(playingQuery);
-          playingSnapshot.forEach(doc => {
-              batch.update(doc.ref, { status: 'finished' });
-          });
-
-          // 2. Set the new song to 'playing'
-          song.requesters.forEach(requester => {
-            if (!requester.originalId) return;
-            const songRef = doc(firestore, 'song_requests', requester.originalId);
-            batch.update(songRef, { status: 'playing' });
-          });
-
           await batch.commit();
-
           toast({
               title: 'Now Playing!',
               description: `"${song.title}" by ${song.artist} is up next.`,
           });
         } catch(error) {
           console.error("Error playing next song:", error);
-          const permissionError = new FirestorePermissionError({
-            path: song.requesters[0]?.originalId || 'song_requests',
-            operation: 'write',
-          });
-          errorEmitter.emit('permission-error', permissionError);
           toast({
             variant: 'destructive',
             title: 'Error',
