@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Facebook, Mic, User } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
-import { useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useAuth, initiateAnonymousSignIn, initiateGoogleSignIn, initiateFacebookSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon() {
@@ -30,12 +30,22 @@ export default function AuthPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const handleAnonymousSignIn = () => {
+  const handleSignIn = (provider: 'google' | 'facebook' | 'anonymous') => {
     if (!auth) {
       toast({ variant: 'destructive', title: 'Error', description: 'Authentication service not available.' });
       return;
     }
-    initiateAnonymousSignIn(auth);
+    switch (provider) {
+      case 'google':
+        initiateGoogleSignIn(auth);
+        break;
+      case 'facebook':
+        initiateFacebookSignIn(auth);
+        break;
+      case 'anonymous':
+        initiateAnonymousSignIn(auth);
+        break;
+    }
   };
 
   return (
@@ -74,15 +84,15 @@ export default function AuthPage() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button variant="outline" className="md:col-span-1">
+                <Button variant="outline" className="md:col-span-1" onClick={() => handleSignIn('google')}>
                   <GoogleIcon />
                   <span className="ml-2">Google</span>
                 </Button>
-                <Button variant="outline" className="md:col-span-1">
+                <Button variant="outline" className="md:col-span-1" onClick={() => handleSignIn('facebook')}>
                   <Facebook className="text-[#1877F2]" />
                   <span className="ml-2">Facebook</span>
                 </Button>
-                <Button variant="outline" className="md:col-span-1" onClick={handleAnonymousSignIn}>
+                <Button variant="outline" className="md:col-span-1" onClick={() => handleSignIn('anonymous')}>
                     <User />
                    <span className="ml-2">Guest</span>
                 </Button>
