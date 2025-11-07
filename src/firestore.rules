@@ -27,11 +27,11 @@ service cloud.firestore {
 
     match /artists/{artistId} {
       allow read: if true;
-      allow write: if hasClaim('kj');
+      allow write: if isSignedIn();
 
       match /songs/{songId} {
           allow read: if true;
-          allow write: if hasClaim('kj');
+          allow write: if isSignedIn();
       }
     }
     
