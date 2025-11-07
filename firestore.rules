@@ -35,7 +35,7 @@ service cloud.firestore {
 
       // Patrons can create their own requests.
       // The `patronId` in the new document must match the user's own UID.
-      allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
+      allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
 
       // Any signed-in user (acting as KJ) can update or delete any request.
       allow update, delete: if isSignedIn();
