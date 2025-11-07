@@ -15,19 +15,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth, initiateEmailSignUp } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { updateProfile } from 'firebase/auth';
 
 const formSchema = z.object({
-  name: z.string().min(2, {
+  displayName: z.string().min(2, {
     message: 'Name must be at least 2 characters.',
-  }),
-  username: z.string().min(3, {
-    message: 'Username must be at least 3 characters.',
   }),
   email: z.string().email({
     message: 'Invalid email address.',
-  }),
-  telephone: z.string().min(10, {
-    message: 'Please enter a valid phone number.',
   }),
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
@@ -36,21 +33,35 @@ const formSchema = z.object({
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const auth = useAuth();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      username: '',
+      displayName: '',
       email: '',
-      telephone: '',
       password: '',
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where you would handle form submission, e.g., calling Firebase auth
-    console.log(values);
-    // In a real app, you would redirect on success
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!auth) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Authentication service is not available.' });
+      return;
+    }
+    try {
+      // initiateEmailSignUp doesn't return the user credential, so we handle profile updates via onAuthStateChanged listener in provider
+      await initiateEmailSignUp(auth, values.email, values.password, values.displayName);
+      // The redirect will be handled by the AuthHandler in the provider
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message || "An unexpected error occurred.",
+      });
+    }
   }
 
   return (
@@ -58,25 +69,12 @@ export function RegisterForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="displayName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Display Name</FormLabel>
               <FormControl>
                 <Input placeholder="John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Username</FormLabel>
-              <FormControl>
-                <Input placeholder="johndoe" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -90,19 +88,6 @@ export function RegisterForm() {
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="name@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="telephone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Telephone</FormLabel>
-              <FormControl>
-                <Input type="tel" placeholder="(123) 456-7890" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -134,8 +119,8 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Create Account
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? 'Creating Account...' : 'Create Account'}
         </Button>
       </form>
     </Form>

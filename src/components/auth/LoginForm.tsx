@@ -16,6 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth, initiateEmailSignIn } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -28,6 +30,9 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const auth = useAuth();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -37,9 +42,11 @@ export function LoginForm() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where you would handle form submission, e.g., calling Firebase auth
-    console.log(values);
-    // In a real app, you would redirect on success
+    if (!auth) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Authentication service is not available.' });
+      return;
+    }
+    initiateEmailSignIn(auth, values.email, values.password);
   }
 
   return (
@@ -92,8 +99,8 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Sign In
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? 'Signing In...' : 'Sign In'}
         </Button>
       </form>
     </Form>

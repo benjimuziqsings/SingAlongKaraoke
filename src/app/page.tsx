@@ -9,9 +9,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Facebook, Mic } from 'lucide-react';
+import { Facebook, Mic, User } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon() {
   return (
@@ -25,6 +27,17 @@ function GoogleIcon() {
 }
 
 export default function AuthPage() {
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const handleAnonymousSignIn = () => {
+    if (!auth) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Authentication service not available.' });
+      return;
+    }
+    initiateAnonymousSignIn(auth);
+  };
+
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-transparent p-4">
        <div className="flex items-center gap-3 mb-6">
@@ -60,14 +73,18 @@ export default function AuthPage() {
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button variant="outline" className="md:col-span-1">
                   <GoogleIcon />
-                  Google
+                  <span className="ml-2">Google</span>
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" className="md:col-span-1">
                   <Facebook className="text-[#1877F2]" />
-                  Facebook
+                  <span className="ml-2">Facebook</span>
+                </Button>
+                <Button variant="outline" className="md:col-span-1" onClick={handleAnonymousSignIn}>
+                    <User />
+                   <span className="ml-2">Guest</span>
                 </Button>
               </div>
             </CardContent>

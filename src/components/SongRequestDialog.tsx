@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAuth, initiateAnonymousSignIn } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Music, PlusCircle } from 'lucide-react';
+import { DollarSign, Music, PlusCircle, User } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -64,6 +64,7 @@ export function SongRequestDialog() {
   const [songs, setSongs] = useState<{ title: string }[]>([]);
   const { user } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const artists = allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable));
 
@@ -101,60 +102,63 @@ export function SongRequestDialog() {
     }
   }, [selectedArtist, artists, catalogForm]);
 
-  async function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be signed in to make a request.' });
-      return;
+  useEffect(() => {
+    // Pre-fill singer name if user is logged in
+    if (user?.displayName) {
+        catalogForm.setValue('singer', user.displayName);
+        suggestionForm.setValue('singer', user.displayName);
     }
-    
-    const songData = {
-        singer: values.singer,
-        artistName: values.artist,
-        songTitle: values.title,
-        specialAnnouncement: values.announcement || '',
-        requestTime: Date.now(),
-        status: 'queued' as 'queued',
-        patronId: user.uid,
-    };
+  }, [user, isOpen, catalogForm, suggestionForm]);
+
+
+  const handleSubmit = (songData: any) => {
+    if (!user) {
+        // If not logged in, sign in anonymously first
+        initiateAnonymousSignIn(auth);
+        toast({ 
+            title: 'Signing in...', 
+            description: 'You need to be signed in to make a request. We are signing you in anonymously. Please try again in a moment.' 
+        });
+        return;
+    }
 
     const requestsCol = collection(firestore, 'song_requests');
     addDocumentNonBlocking(requestsCol, songData);
 
     toast({
         title: 'Request Sent!',
-        description: `Your request for "${values.title}" is in the queue.`,
+        description: `Your request for "${songData.songTitle}" is in the queue.`,
     });
-    catalogForm.reset();
     setIsOpen(false);
-  }
+  };
 
-  async function onSuggestionSubmit(values: z.infer<typeof suggestionSchema>) {
-     if (!user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be signed in to make a suggestion.' });
-      return;
-    }
-    
-    // In a real app, you'd also handle the payment flow here.
-    const songData = {
+
+  function onCatalogSubmit(values: z.infer<typeof songRequestSchema>) {
+    handleSubmit({
         singer: values.singer,
         artistName: values.artist,
         songTitle: values.title,
         specialAnnouncement: values.announcement || '',
         requestTime: Date.now(),
         status: 'queued' as 'queued',
-        patronId: user.uid,
-        tip: values.tip,
-    };
+        patronId: user?.uid,
+    });
+    catalogForm.reset();
+  }
 
-    const requestsCol = collection(firestore, 'song_requests');
-    addDocumentNonBlocking(requestsCol, songData);
-    
-    toast({
-        title: 'Suggestion Sent!',
-        description: `Your suggestion for "${values.title}" is in the queue with a $${values.tip} tip!`,
+  function onSuggestionSubmit(values: z.infer<typeof suggestionSchema>) {
+    // In a real app, you'd also handle the payment flow here.
+    handleSubmit({
+        singer: values.singer,
+        artistName: values.artist,
+        songTitle: values.title,
+        specialAnnouncement: values.announcement || '',
+        requestTime: Date.now(),
+        status: 'queued' as 'queued',
+        patronId: user?.uid,
+        tip: values.tip,
     });
     suggestionForm.reset();
-    setIsOpen(false);
   }
 
   return (

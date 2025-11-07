@@ -17,6 +17,7 @@ export type Song = {
   status: SongStatus;
   requestTime: number;
   patronId: string;
+  tip?: number;
 };
 
 export type GroupedSong = {
