@@ -122,26 +122,39 @@ export function CatalogManagement() {
       const songsColRef = collection(firestore, 'artists', artistId, 'songs');
       
       try {
-        const songsSnapshot = await getDocs(songsColRef);
-        const batch = writeBatch(firestore);
+        const songsSnapshot = await getDocs(songsColRef).catch((serverError) => {
+          // This will catch a permissions error on the 'list' (getDocs) operation.
+          const permissionError = new FirestorePermissionError({
+            path: songsColRef.path,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          // Re-throw to prevent further execution in the try block
+          throw permissionError;
+        });
 
+        const batch = writeBatch(firestore);
         songsSnapshot.forEach(songDoc => {
             batch.delete(songDoc.ref);
         });
-        
         batch.delete(artistRef);
         
-        await batch.commit();
-        toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
-
-      } catch (serverError) {
-        // This is a complex operation (get + delete). We will create a generic error for now.
-        // A more advanced implementation might try to determine which specific operation failed.
-        const permissionError = new FirestorePermissionError({
-            path: songsColRef.path, // We can point to the collection as the likely source of failure
-            operation: 'list', // A 'list' (from getDocs) is the first operation that might fail.
+        await batch.commit().catch((serverError) => {
+          // This will catch a permissions error on the 'delete' (batch.commit) operation.
+          const permissionError = new FirestorePermissionError({
+              path: artistRef.path, // The primary path being operated on
+              operation: 'delete',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          // Re-throw to ensure the toast doesn't show success
+          throw permissionError;
         });
-        errorEmitter.emit('permission-error', permissionError);
+
+        toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
+      } catch (error) {
+        // This catch block now handles the re-thrown permission errors.
+        // The error is already emitted, so we just need to prevent the success toast.
+        console.error("Failed to remove artist:", error);
       }
     });
   };
@@ -453,3 +466,5 @@ export function CatalogManagement() {
     </Card>
   );
 }
+
+    
