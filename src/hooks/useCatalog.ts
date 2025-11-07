@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, onSnapshot, getDocs, query } from 'firebase/firestore';
 import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
@@ -11,6 +11,8 @@ export interface UseCatalogResult {
   isLoading: boolean;
   error: Error | null;
 }
+
+const EMPTY_SONGS: CatalogSong[] = [];
 
 export function useCatalog(): UseCatalogResult {
   const firestore = useFirestore();
@@ -41,10 +43,12 @@ export function useCatalog(): UseCatalogResult {
           const songsCollectionRef = collection(artistDoc.ref, 'songs');
           const songsSnapshot = await getDocs(songsCollectionRef);
           
-          const songs = songsSnapshot.docs.map(songDoc => ({
-            id: songDoc.id,
-            ...songDoc.data(),
-          } as CatalogSong));
+          const songs = songsSnapshot.docs.length > 0 
+            ? songsSnapshot.docs.map(songDoc => ({
+                id: songDoc.id,
+                ...songDoc.data(),
+              } as CatalogSong))
+            : EMPTY_SONGS; // Use the stable empty array reference
           
           return {
             id: artistDoc.id,
