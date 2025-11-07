@@ -32,7 +32,7 @@ service cloud.firestore {
     // Patrons can create their own requests.
     // Any signed-in user can act as KJ and update/delete any request.
     match /song_requests/{songRequestId} {
-        allow read: if isSignedIn();
+        allow list, read: if isSignedIn();
         allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
         allow update, delete: if isSignedIn();
     }
