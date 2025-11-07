@@ -3,7 +3,7 @@
 import { useTransition } from 'react';
 import type { GroupedSong } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,15 @@ export function AdminQueue() {
           });
         } catch(error) {
           console.error("Error playing next song:", error);
+          // Create and emit the contextual error
+          const permissionError = new FirestorePermissionError({
+            path: `song_requests (batch operation)`,
+            operation: 'update',
+            requestResourceData: { status: 'playing/finished' }
+          });
+          errorEmitter.emit('permission-error', permissionError);
+
+          // Also show a generic toast to the user
           toast({
             variant: 'destructive',
             title: 'Error',
