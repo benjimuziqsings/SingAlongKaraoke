@@ -1,28 +1,23 @@
 
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { useToast } from '@/hooks/use-toast';
+import { collection, query } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Shield } from 'lucide-react';
+import { User, ShieldCheck } from 'lucide-react';
 
 interface PatronProfile {
   id: string;
   displayName: string;
   email: string;
-  isKJ?: boolean;
+  // isKJ is determined by custom claims, not a document field.
 }
 
 export function UserManagement() {
   const firestore = useFirestore();
-  const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
 
   const patronsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -31,18 +26,6 @@ export function UserManagement() {
 
   const { data: patrons, isLoading } = useCollection<PatronProfile>(patronsQuery);
 
-  const handleKjToggle = (patron: PatronProfile) => {
-    if (!firestore) return;
-    startTransition(() => {
-      const patronRef = doc(firestore, 'patrons', patron.id);
-      const newKjStatus = !patron.isKJ;
-      updateDocumentNonBlocking(patronRef, { isKJ: newKjStatus });
-      toast({
-        title: 'Permissions Updated',
-        description: `${patron.displayName} is ${newKjStatus ? 'now' : 'no longer'} a KJ.`,
-      });
-    });
-  };
 
   if (isLoading) {
     return (
@@ -66,20 +49,20 @@ export function UserManagement() {
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-3">
           <User />
-          User Management
+          Registered Users
         </CardTitle>
       </CardHeader>
       <CardContent>
+         <p className="text-sm text-muted-foreground mb-4">
+            This table shows all registered users. KJ (admin) status is managed via Firebase custom claims and must be set by a project administrator on the backend.
+        </p>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Shield className="h-4 w-4" />
-                  KJ Status
-                </div>
+                 Status
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -89,12 +72,11 @@ export function UserManagement() {
                 <TableCell className="font-medium">{patron.displayName}</TableCell>
                 <TableCell className="text-muted-foreground">{patron.email}</TableCell>
                 <TableCell className="text-right">
-                  <Switch
-                    checked={patron.isKJ || false}
-                    onCheckedChange={() => handleKjToggle(patron)}
-                    disabled={isPending}
-                    aria-label={`Toggle KJ status for ${patron.displayName}`}
-                  />
+                    {/* 
+                      Displaying KJ status from a doc field is insecure and doesn't reflect actual permissions.
+                      True KJ status is derived from a custom claim on the auth token, which is not available here.
+                      This UI is now read-only.
+                    */}
                 </TableCell>
               </TableRow>
             ))}
