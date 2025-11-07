@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 20: Simplify song_requests read rule.
+ * Version 21: Add KJ role via custom claims for production-ready security.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -22,6 +22,15 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+     * @description Checks if the user has a specific custom claim.
+     * @param {string} claim - The name of the custom claim (e.g., 'kj').
+     * @return {bool} True if the user has the claim and it is true.
+     */
+    function hasClaim(claim) {
+      return isSignedIn() && request.auth.token[claim] == true;
+    }
 
     // Patrons can only read and write their own profile.
     match /patrons/{patronId} {
@@ -30,26 +39,26 @@ service cloud.firestore {
     
     // Rules for the song_requests collection.
     match /song_requests/{songRequestId} {
-      // Any signed-in user can read the entire queue.
+      // Any signed-in user can read the queue.
       allow read: if isSignedIn();
 
       // Patrons can create their own requests.
       // The `patronId` in the new document must match the user's own UID.
       allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
 
-      // Any signed-in user (acting as KJ) can update or delete any request.
-      allow update, delete: if isSignedIn();
+      // Only the KJ can update or delete any request. Regular users cannot.
+      allow update, delete: if hasClaim('kj');
     }
 
     // Catalog can be read by anyone.
-    // Catalog can be written to by any signed-in user (the KJ).
+    // Catalog can be written to by the KJ.
     match /artists/{artistId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if hasClaim('kj');
 
       match /songs/{songId} {
           allow read: if true;
-          allow write: if isSignedIn();
+          allow write: if hasClaim('kj');
       }
     }
     
