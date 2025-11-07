@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
 import { useUser } from '@/firebase/provider';
@@ -27,8 +27,7 @@ export function useQueue(): UseQueueResult {
   // Memoize the query to prevent re-creating it on every render
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
-    // The query is simplified to a basic collection read. Ordering is handled client-side.
-    return query(collection(firestore, 'song_requests'));
+    return query(collection(firestore, 'song_requests'), orderBy('requestTime'));
   }, [firestore, isUserLoading]);
 
   // Use the useCollection hook to get real-time updates
