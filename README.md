@@ -48,3 +48,4 @@ You can use the Firebase CLI to set a custom claim.
     firebase auth:set-claims A1b2C3d4e5... --claims=isKJ=true
     ```
 The user will have admin privileges on their next sign-in.
+# SingAlongKaraoke
