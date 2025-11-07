@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -30,6 +31,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    // This is required to allow requests from the development environment's hostname.
+    allowedDevOrigins: [
+        'https://*.cloudworkstations.dev',
+    ]
+  }
 };
 
 export default nextConfig;
