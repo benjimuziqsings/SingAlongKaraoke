@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 25: Drastically simplify song request read rule to fix persistent permission error.
+ * Version 26: Drastically simplify song request read rule again to fix persistent permission error.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -39,7 +39,7 @@ service cloud.firestore {
     
     // Rules for the song_requests collection.
     match /song_requests/{songRequestId} {
-      // Any signed-in user can read the entire queue. This allows the main queue and user history to function.
+      // Any signed-in user can read any document in the queue. This is critical for the app to function.
       allow read: if isSignedIn();
 
       // Patrons can create their own requests.
