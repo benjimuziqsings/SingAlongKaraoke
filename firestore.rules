@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 3: Production-ready rules for a single KJ.
+ * Version 4: Correctly separated list and document-level access.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,16 +31,17 @@ service cloud.firestore {
     // Rules for the song_requests collection
     match /song_requests/{songRequestId} {
       // Any signed-in user can read an individual song request.
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
 
       // Patrons can create their own requests.
       allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
 
       // Any signed-in user (acting as KJ) can update or delete any request.
       allow update, delete: if isSignedIn();
-
-      // The song queue list can be read by any signed-in user.
-      // This is a collection-level rule.
+    }
+    
+    // The song queue list can be read by any signed-in user.
+    match /song_requests/{path=**} {
       allow list: if isSignedIn();
     }
 
