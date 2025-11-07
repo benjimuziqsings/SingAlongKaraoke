@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DollarSign, PartyPopper } from 'lucide-react';
-import { useFirestore, useUser, useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
 
@@ -29,16 +29,12 @@ export function TippingDialog() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
-  const auth = useAuth();
 
   const handleTip = (amount: number) => {
     if (!user) {
-      if (auth) {
-        initiateAnonymousSignIn(auth);
-      }
       toast({
-        title: 'Signing in...',
-        description: 'You need to be signed in to send a tip. We are signing you in. Please try again in a moment.'
+        title: 'Please Sign In',
+        description: 'You need to be signed in to send a tip. Please sign in or create an account.'
       });
       return;
     }

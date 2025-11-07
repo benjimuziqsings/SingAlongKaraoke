@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, initiateAnonymousSignIn, useAuth } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
 
@@ -45,7 +45,6 @@ export function ReviewDialog() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
-  const auth = useAuth();
 
   const form = useForm<z.infer<typeof reviewSchema>>({
     resolver: zodResolver(reviewSchema),
@@ -64,12 +63,9 @@ export function ReviewDialog() {
 
   async function onSubmit(values: z.infer<typeof reviewSchema>) {
     if (!user) {
-        if(auth) {
-            initiateAnonymousSignIn(auth);
-        }
         toast({
-            title: 'Signing in...',
-            description: 'You need to be signed in to leave a review. We are signing you in. Please try again in a moment.'
+            title: 'Please Sign In',
+            description: 'You need to be signed in to leave a review. Please sign in or create an account.'
         });
         return;
     }

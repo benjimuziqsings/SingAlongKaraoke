@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -70,7 +70,6 @@ export function SongRequestDialog() {
   const { artists: allArtists, isLoading: isCatalogLoading } = useCatalog();
   const { user } = useUser();
   const firestore = useFirestore();
-  const auth = useAuth();
   const [artistPopoverOpen, setArtistPopoverOpen] = useState(false);
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
 
@@ -123,12 +122,9 @@ export function SongRequestDialog() {
 
   const handleSubmit = (songData: any) => {
     if (!user) {
-        if (auth) {
-          initiateAnonymousSignIn(auth);
-        }
         toast({ 
-            title: 'Signing in...', 
-            description: 'You need to be signed in to make a request. We are signing you in anonymously. Please try again in a moment.' 
+            title: 'Please Sign In', 
+            description: 'You need to be signed in to make a request. Please sign in or create an account.' 
         });
         return;
     }

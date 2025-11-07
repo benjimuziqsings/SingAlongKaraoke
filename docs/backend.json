@@ -192,7 +192,6 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous",
       "google.com",
       "facebook.com"
     ]
