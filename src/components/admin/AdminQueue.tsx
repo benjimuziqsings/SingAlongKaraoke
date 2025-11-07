@@ -6,7 +6,6 @@ import type { GroupedSong } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +28,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function AdminQueue() {
   const [isPending, startTransition] = useTransition();

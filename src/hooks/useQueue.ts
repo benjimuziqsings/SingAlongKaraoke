@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
 import { useUser } from '@/firebase/provider';
@@ -28,7 +28,8 @@ export function useQueue(): UseQueueResult {
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
     return query(
-      collection(firestore, 'song_requests')
+      collection(firestore, 'song_requests'),
+      orderBy('requestTime', 'desc')
     );
   }, [firestore, isUserLoading]);
 
