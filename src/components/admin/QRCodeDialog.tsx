@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,13 +13,17 @@ import {
 } from '@/components/ui/dialog';
 import { QrCode, Smartphone } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import Image from 'next/image';
 
 export function QRCodeDialog() {
   const [url, setUrl] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   useEffect(() => {
     // This runs only on the client, after hydration
-    setUrl(window.location.origin);
+    const origin = window.location.origin;
+    setUrl(origin);
+    setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(origin)}`);
   }, []);
 
   return (
@@ -40,9 +45,18 @@ export function QRCodeDialog() {
           </DialogDescription>
         </DialogHeader>
         <div className="text-center space-y-4 py-4">
-            <div className="bg-white p-4 rounded-lg inline-block">
-                <QrCode className="h-48 w-48 text-black" />
-            </div>
+            {qrCodeUrl ? (
+              <div className="bg-white p-4 rounded-lg inline-block">
+                  <Image
+                      src={qrCodeUrl}
+                      alt="QR code to access the karaoke app"
+                      width={200}
+                      height={200}
+                  />
+              </div>
+            ) : (
+                <Skeleton className="h-[232px] w-[232px] mx-auto" />
+            )}
             {url ? (
                 <p className="text-sm font-mono bg-muted rounded p-2 break-all">{url}</p>
             ) : (
