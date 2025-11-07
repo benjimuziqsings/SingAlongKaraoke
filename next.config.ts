@@ -33,10 +33,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     // This is required to allow requests from the development environment's hostname.
-    allowedDevOrigins: [
-        'https://*.cloudworkstations.dev',
-    ]
-  }
+    // allowedDevOrigins is now a top-level experimental property
+  },
+  allowedDevOrigins: [
+      'https://*.cloudworkstations.dev',
+  ]
 };
 
 export default nextConfig;
