@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 7: Consolidated read rules for song_requests to fix list permission error.
+ * Version 8: Correctly consolidate read/write rules for song_requests to fix list permission error.
  */
 rules_version = '2';
 service cloud.firestore {
