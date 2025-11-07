@@ -114,11 +114,18 @@ export function SongRequestDialog() {
   const handleSubmit = (songData: any) => {
     if (!user) {
         // If not logged in, sign in anonymously first
-        initiateAnonymousSignIn(auth);
+        if (auth) {
+          initiateAnonymousSignIn(auth);
+        }
         toast({ 
             title: 'Signing in...', 
             description: 'You need to be signed in to make a request. We are signing you in anonymously. Please try again in a moment.' 
         });
+        return;
+    }
+
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Database not connected.' });
         return;
     }
 
