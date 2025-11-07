@@ -117,35 +117,32 @@ export function CatalogManagement() {
   
   const handleRemoveArtist = (artistId: string, artistName: string) => {
     startTransition(async () => {
+      if (!firestore) return;
       const artistRef = doc(firestore, 'artists', artistId);
       const songsColRef = collection(firestore, 'artists', artistId, 'songs');
       
-      const batch = writeBatch(firestore);
-      
-      const songsSnapshot = await getDocs(songsColRef).catch(serverError => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: songsColRef.path,
-          operation: 'list',
-        }));
-        return null;
-      });
+      try {
+        const songsSnapshot = await getDocs(songsColRef);
+        const batch = writeBatch(firestore);
 
-      if (!songsSnapshot) return;
-
-      songsSnapshot.forEach(songDoc => {
-        batch.delete(songDoc.ref);
-      });
-      
-      batch.delete(artistRef);
-      
-      batch.commit().then(() => {
+        songsSnapshot.forEach(songDoc => {
+            batch.delete(songDoc.ref);
+        });
+        
+        batch.delete(artistRef);
+        
+        await batch.commit();
         toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
-      }).catch(serverError => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: artistRef.path,
-            operation: 'delete',
-        }));
-      });
+
+      } catch (serverError) {
+        // This is a complex operation (get + delete). We will create a generic error for now.
+        // A more advanced implementation might try to determine which specific operation failed.
+        const permissionError = new FirestorePermissionError({
+            path: songsColRef.path, // We can point to the collection as the likely source of failure
+            operation: 'list', // A 'list' (from getDocs) is the first operation that might fail.
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
     });
   };
 
@@ -456,6 +453,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
-    
-    
