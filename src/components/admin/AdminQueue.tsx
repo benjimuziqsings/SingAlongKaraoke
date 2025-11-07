@@ -115,7 +115,7 @@ export function AdminQueue() {
       const q = query(collection(firestore, 'song_requests'), where('status', '==', statusToClear));
       
       try {
-        const querySnapshot = await getDocs(q).catch(serverError => {
+        const querySnapshot = await getDocs(q).catch((serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: 'song_requests',
                 operation: 'list',
@@ -129,7 +129,7 @@ export function AdminQueue() {
           batch.delete(doc.ref);
         });
         
-        await batch.commit().catch(serverError => {
+        await batch.commit().catch((serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: 'song_requests (batch delete)',
                 operation: 'delete',

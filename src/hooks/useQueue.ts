@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { useFirestore, useCollection } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
 import { useUser } from '@/firebase/provider';
@@ -32,19 +32,18 @@ export function useQueue(): UseQueueResult {
     return query(collection(firestore, 'song_requests'));
   }, [firestore]);
 
-  const refetch = useCallback(() => {
+  const refetch = useCallback(async () => {
     if (!songRequestsQuery) return;
-    const unsubscribe = onSnapshot(songRequestsQuery, (snapshot) => {
+    setIsLoading(true);
+    try {
+        const snapshot = await getDocs(songRequestsQuery);
         const fetchedSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
         setSongs(fetchedSongs);
-        setIsLoading(false);
-    }, (err) => {
+    } catch (err: any) {
         setError(err);
+    } finally {
         setIsLoading(false);
-    });
-    // Unsubscribe immediately after fetching to perform a one-time refetch.
-    // For real-time updates, you would manage this differently.
-    setTimeout(() => unsubscribe(), 1000); 
+    }
   }, [songRequestsQuery]);
 
 
@@ -92,6 +91,9 @@ export function useQueue(): UseQueueResult {
             if (song.requestTime > groupedSongs[key].requestTime) {
                 groupedSongs[key].requestTime = song.requestTime;
             }
+            // Also update the status to the most current one
+             groupedSongs[key].status = song.status;
+
         } else {
             // Create a new group for this song
             groupedSongs[key] = {
