@@ -29,7 +29,6 @@ export function useQueue(): UseQueueResult {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
     return query(
       collection(firestore, 'song_requests'),
-      where('status', 'in', ['queued', 'playing', 'finished']),
       orderBy('requestTime', 'asc') // Order by time to ensure consistency
     );
   }, [firestore, isUserLoading]);
@@ -47,8 +46,11 @@ export function useQueue(): UseQueueResult {
       };
     }
     
+    const validStatuses = ['queued', 'playing', 'finished'];
+    const relevantSongs = songs.filter(song => validStatuses.includes(song.status));
+
     // Group songs by title and artist to handle multiple requests for the same song
-    const groupedSongs = songs.reduce((acc, song) => {
+    const groupedSongs = relevantSongs.reduce((acc, song) => {
       const key = `${song.songTitle}-${song.artistName}`;
       if (!acc[key]) {
         acc[key] = {
