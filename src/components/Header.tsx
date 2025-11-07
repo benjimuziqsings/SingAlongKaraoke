@@ -1,10 +1,12 @@
 
 import Link from 'next/link';
-import { Mic, UserCog, Users, MessageSquareText } from 'lucide-react';
+import { Mic, UserCog, Users, MessageSquareText, UserCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { QRCodeDialog } from './admin/QRCodeDialog';
+import { useUser } from '@/firebase';
 
 export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
+  const { user } = useUser();
   return (
     <header className="py-3 px-4 md:px-6 border-b border-border/50 sticky top-0 bg-background/80 backdrop-blur-sm z-20">
       <div className="container mx-auto flex justify-between items-center">
@@ -23,6 +25,14 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                 Reviews
               </Link>
             </Button>
+            {user && !isAdmin && (
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/profile">
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </Button>
+            )}
             {isAdmin && <QRCodeDialog />}
           <Button asChild variant="ghost" size="sm">
             {isAdmin ? (

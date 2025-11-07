@@ -78,7 +78,8 @@
           "format": "email"
         },
         "telephone": {
-          "type": "string"
+          "type": "string",
+          "description": "The patron's telephone number."
         },
         "username": {
           "type": "string"

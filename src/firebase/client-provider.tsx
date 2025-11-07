@@ -12,7 +12,7 @@ interface FirebaseClientProviderProps {
 }
 
 const AUTH_ROUTES = ['/'];
-const PROTECTED_ROUTES = ['/home', '/admin', '/reviews'];
+const PROTECTED_ROUTES = ['/home', '/admin', '/reviews', '/profile'];
 
 function GlobalLoadingSkeleton() {
     return (
