@@ -98,24 +98,26 @@ export function SongRequestDialog() {
 
 
   const selectedArtist = catalogForm.watch('artist');
+  const { setValue: setCatalogValue, resetField: resetCatalogField } = catalogForm;
+  const { setValue: setSuggestionValue } = suggestionForm;
 
   useEffect(() => {
     if (selectedArtist) {
       const artistData = artists.find(a => a.name === selectedArtist);
       const availableSongs = artistData?.songs?.filter(s => s.isAvailable) || [];
       setSongs(availableSongs);
-      catalogForm.resetField('title');
+      resetCatalogField('title');
     } else {
       setSongs([]);
     }
-  }, [selectedArtist, artists, catalogForm]);
+  }, [selectedArtist, artists, resetCatalogField]);
 
   useEffect(() => {
-    if (user?.displayName) {
-        catalogForm.setValue('singer', user.displayName);
-        suggestionForm.setValue('singer', user.displayName);
+    if (isOpen && user?.displayName) {
+        setCatalogValue('singer', user.displayName);
+        setSuggestionValue('singer', user.displayName);
     }
-  }, [user, isOpen, catalogForm, suggestionForm]);
+  }, [user, isOpen, setCatalogValue, setSuggestionValue]);
 
 
   const handleSubmit = (songData: any) => {
