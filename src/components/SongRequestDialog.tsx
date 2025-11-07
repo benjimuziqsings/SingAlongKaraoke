@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -68,14 +68,13 @@ export function SongRequestDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { artists: allArtists, isLoading: isCatalogLoading } = useCatalog();
-  const [songs, setSongs] = useState<{ title: string }[]>([]);
   const { user } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
   const [artistPopoverOpen, setArtistPopoverOpen] = useState(false);
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
 
-  const artists = allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable));
+  const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),
@@ -99,25 +98,27 @@ export function SongRequestDialog() {
 
   const selectedArtist = catalogForm.watch('artist');
 
-  useEffect(() => {
+  const songs = useMemo(() => {
     if (selectedArtist) {
       const artistData = artists.find(a => a.name === selectedArtist);
-      const availableSongs = artistData?.songs?.filter(s => s.isAvailable) || [];
-      setSongs(availableSongs);
-      catalogForm.resetField('title');
-    } else {
-      setSongs([]);
+      return artistData?.songs?.filter(s => s.isAvailable) || [];
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return [];
   }, [selectedArtist, artists]);
+
+
+  useEffect(() => {
+    if (selectedArtist) {
+      catalogForm.resetField('title');
+    }
+  }, [selectedArtist, catalogForm]);
 
   useEffect(() => {
     if (isOpen && user?.displayName) {
         catalogForm.setValue('singer', user.displayName);
         suggestionForm.setValue('singer', user.displayName);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isOpen]);
+  }, [user, isOpen, catalogForm, suggestionForm]);
 
 
   const handleSubmit = (songData: any) => {

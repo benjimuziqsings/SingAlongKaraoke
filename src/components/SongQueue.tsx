@@ -76,7 +76,7 @@ export function SongQueue({ songs, title = "Up Next", isHistory = false }: SongQ
           ))}
         </ul>
       ) : (
-        <EmptyQueue />
+        <EmptyQueue isAdmin={!isHistory} />
       )}
     </section>
   );
