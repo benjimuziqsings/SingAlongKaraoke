@@ -32,6 +32,33 @@ To run this application on your local machine for development, you will need to 
     ```
     The application will now run locally and connect to your Firebase project using your CLI credentials.
 
+## Configuring Sign-In Methods
+
+To enable users to sign in with Google and Facebook, you must configure these providers in the Firebase Console.
+
+### Enable Google Sign-In
+
+1.  Go to the [Firebase Console](https://console.firebase.google.com/).
+2.  Navigate to **Authentication** > **Sign-in method**.
+3.  Click on **Google** from the list of providers.
+4.  **Enable** the provider.
+5.  For the **Project public-facing name**, select your project's public name.
+6.  For **Project support email**, select your email address.
+7.  Click **Save**. Google Sign-In should now be active.
+
+### Enable Facebook Sign-In
+
+1.  Go to the [Facebook for Developers](https://developers.facebook.com/) website and create a new app.
+2.  From the app dashboard, go to **Settings > Basic**. You will need your **App ID** and **App Secret**.
+3.  Go back to the [Firebase Console](https://console.firebase.google.com/) > **Authentication** > **Sign-in method**.
+4.  Click on **Facebook**.
+5.  **Enable** the provider.
+6.  Enter the **App ID** and **App Secret** you got from the Facebook Developer dashboard.
+7.  Firebase will give you an **OAuth redirect URI** (it will look something like `https://<your-project-id>.firebaseapp.com/__/auth/handler`). Copy this URI.
+8.  Go back to your Facebook App's dashboard. Under **Products**, add **Facebook Login** and go to its **Settings**.
+9.  In the **Valid OAuth Redirect URIs** field, paste the URI you copied from Firebase.
+10. Click **Save Changes**. Facebook Sign-In should now be active.
+
 ## Setting the First Karaoke Jockey (KJ)
 
 To access the admin dashboard, at least one user must be assigned the "KJ" role. This is done using a **custom claim** on the user's account. This must be done from a trusted backend environment.
@@ -48,4 +75,3 @@ You can use the Firebase CLI to set a custom claim.
     firebase auth:set-claims A1b2C3d4e5... --claims=isKJ=true
     ```
 The user will have admin privileges on their next sign-in.
-# SingAlongKaraoke
