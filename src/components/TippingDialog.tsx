@@ -17,6 +17,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DollarSign, PartyPopper } from 'lucide-react';
+import { useFirestore, useUser, useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection } from 'firebase/firestore';
 
 const tipAmounts = [2, 5, 10, 15, 20];
 
@@ -24,10 +27,36 @@ export function TippingDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
 
   const handleTip = (amount: number) => {
-    // In a real app, this would trigger a payment flow.
-    // For now, we'll just show a toast.
+    if (!user) {
+      if (auth) {
+        initiateAnonymousSignIn(auth);
+      }
+      toast({
+        title: 'Signing in...',
+        description: 'You need to be signed in to send a tip. We are signing you in. Please try again in a moment.'
+      });
+      return;
+    }
+
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot connect to the database.' });
+      return;
+    }
+
+    const tipData = {
+      amount,
+      tipTime: Date.now(),
+      patronId: user.uid,
+    };
+
+    const tipsCol = collection(firestore, 'tips');
+    addDocumentNonBlocking(tipsCol, tipData);
+
     toast({
       title: 'Thank You!',
       description: `You've tipped $${amount}. We appreciate your support!`,

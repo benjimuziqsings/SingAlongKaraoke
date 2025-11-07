@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 22: Add review and tip rules.
+ * Version 23: Add tip rules.
  */
 rules_version = '2';
 service cloud.firestore {

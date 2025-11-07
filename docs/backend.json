@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "SongRequest": {
@@ -106,9 +107,8 @@
           "description": "The amount of the tip."
         },
         "tipTime": {
-          "type": "string",
-          "description": "Timestamp indicating when the tip was given.",
-          "format": "date-time"
+          "type": "number",
+          "description": "Timestamp indicating when the tip was given."
         },
         "patronId": {
           "type": "string",
@@ -246,6 +246,16 @@
             "$ref": "#/backend/entities/Review"
           },
           "description": "A global collection for all patron reviews."
+        }
+      },
+      {
+        "path": "/tips/{tipId}",
+        "definition": {
+            "entityName": "Tip",
+            "schema": {
+                "$ref": "#/backend/entities/Tip"
+            },
+            "description": "A global collection of all tips."
         }
       }
     ]
