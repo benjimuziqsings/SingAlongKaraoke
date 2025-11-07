@@ -1,7 +1,7 @@
 
 /**
  * @fileoverview Firestore Security Rules for the Karaoke Queue Management App.
- * Version 11: Definitive fix for song_requests list permission by consolidating read rules.
+ * Version 12: Definitive fix for song_requests list permission by consolidating read rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,6 +31,7 @@ service cloud.firestore {
     // Rules for the song_requests collection.
     match /song_requests/{songRequestId} {
       // Any signed-in user can read the queue (list) and individual requests (get).
+      // 'read' covers both 'get' and 'list' operations.
       allow read: if isSignedIn();
 
       // Patrons can create their own requests.
