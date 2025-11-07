@@ -39,7 +39,7 @@ service cloud.firestore {
     
     // Rules for the song_requests collection.
     match /song_requests/{songRequestId} {
-      // Any signed-in user can read the queue.
+      // Any signed-in user can read the entire queue.
       allow read: if isSignedIn();
 
       // Patrons can create their own requests.
