@@ -12,19 +12,19 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Check if the user has the 'isKJ' flag in their patron document.
+    // Check if the user has the 'isKJ' custom claim in their auth token.
     function isKJ() {
-      return isSignedIn() && get(/databases/$(database)/documents/patrons/$(request.auth.uid)).data.isKJ == true;
+      return isSignedIn() && request.auth.token.isKJ == true;
     }
 
     // Patrons
     match /patrons/{patronId} {
-      // A KJ can read any patron's profile (for the user management list).
+      // A KJ can read any patron's profile.
       // Users can read their own profile.
       allow read: if isOwner(patronId) || isKJ();
-      // Users can update their own profile, but cannot make themselves a KJ.
-      // A KJ can update another user's profile (specifically to make them a KJ).
-      allow write: if (isOwner(patronId) && !('isKJ' in request.resource.data)) || isKJ();
+      // Users can update their own profile.
+      // A KJ can update any user's profile.
+      allow write: if isOwner(patronId) || isKJ();
     }
     
     // This rule allows a KJ to list all patrons for the user management UI.
@@ -39,7 +39,6 @@ service cloud.firestore {
       // Only the user who created the request can create it.
       allow create: if isOwner(request.resource.data.patronId);
       // Only the KJ can update the status (e.g., to 'playing' or 'finished').
-      // Owners can't change their own request status.
       allow update: if isKJ();
       // Only the KJ or the owner of the request can delete/remove a request.
       allow delete: if isKJ() || isOwner(resource.data.patronId);

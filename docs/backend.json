@@ -83,10 +83,6 @@
         },
         "username": {
           "type": "string"
-        },
-        "isKJ": {
-          "type": "boolean",
-          "description": "Whether the user has Karaoke Jockey (admin) privileges."
         }
       },
       "required": [
@@ -198,7 +194,13 @@
       "password",
       "google.com",
       "facebook.com"
-    ]
+    ],
+    "customClaims": {
+      "isKJ": {
+        "type": "boolean",
+        "description": "Whether the user has Karaoke Jockey (admin) privileges."
+      }
+    }
   },
   "firestore": {
     "/patrons/{patronId}": {
