@@ -361,7 +361,7 @@ export function SongRequestDialog() {
                     </Button>
                   </DialogClose>
                   <Button type="submit" disabled={catalogForm.formState.isSubmitting}>
-                    {catalogForm.formSate.isSubmitting ? 'Submitting...' : 'Add to Queue'}
+                    {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
                   </Button>
                 </DialogFooter>
               </form>
