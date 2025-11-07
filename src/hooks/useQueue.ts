@@ -28,8 +28,7 @@ export function useQueue(): UseQueueResult {
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null; // Wait for user loading to complete
     return query(
-      collection(firestore, 'song_requests'),
-      orderBy('requestTime', 'asc') // Order by time to ensure consistency
+      collection(firestore, 'song_requests')
     );
   }, [firestore, isUserLoading]);
 

@@ -19,9 +19,6 @@ service cloud.firestore {
       allow read, write: if isOwner(patronId);
     }
     
-    // This rule allows any authenticated user to read the entire collection,
-    // which is necessary for the main queue and history views to function.
-    // Write access is more granular.
     match /song_requests/{songRequestId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.patronId == request.auth.uid;
