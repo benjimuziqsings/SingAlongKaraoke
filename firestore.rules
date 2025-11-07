@@ -28,13 +28,20 @@ service cloud.firestore {
       allow read, write: if isOwner(patronId);
     }
     
-    // The song queue can be read by any signed-in user.
-    // Patrons can create their own requests.
-    // Any signed-in user can act as KJ and update/delete any request.
+    // Rules for the song_requests collection
     match /song_requests/{songRequestId} {
-        allow list, read: if isSignedIn();
-        allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
-        allow update, delete: if isSignedIn();
+      // Any signed-in user can read an individual song request.
+      allow read: if isSignedIn();
+
+      // Patrons can create their own requests.
+      allow create: if isSignedIn() && isOwner(request.resource.data.patronId);
+
+      // Any signed-in user (acting as KJ) can update or delete any request.
+      allow update, delete: if isSignedIn();
+
+      // The song queue list can be read by any signed-in user.
+      // This is a collection-level rule.
+      allow list: if isSignedIn();
     }
 
     // Catalog can be read by anyone.
@@ -42,11 +49,11 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow read: if true;
       allow write: if isSignedIn();
-    }
 
-    match /artists/{artistId}/songs/{songId} {
-        allow read: if true;
-        allow write: if isSignedIn();
+      match /songs/{songId} {
+          allow read: if true;
+          allow write: if isSignedIn();
+      }
     }
     
     // Reviews can be read by anyone.
