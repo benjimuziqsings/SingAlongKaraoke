@@ -27,11 +27,6 @@ service cloud.firestore {
       allow write: if isOwner(patronId) || isKJ();
     }
     
-    // This rule allows a KJ to list all patrons for the user management UI.
-    match /patrons/{document=**} {
-      allow list: if isKJ();
-    }
-    
     // Song Requests
     match /song_requests/{songRequestId} {
       // Any signed-in user can read requests (for the queue display).
