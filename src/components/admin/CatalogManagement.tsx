@@ -13,12 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -40,13 +40,20 @@ const lyricsSchema = z.object({
   lyrics: z.string().min(1, 'Lyrics are required'),
 });
 
+const addToQueueSchema = z.object({
+  singer: z.string().min(1, "Singer's name is required."),
+});
+
+
 export function CatalogManagement() {
   const { artists, isLoading } = useCatalog();
+  const { user } = useUser();
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);
   const [isSongDialogOpen, setIsSongDialogOpen] = useState(false);
   const [isLyricsDialogOpen, setIsLyricsDialogOpen] = useState(false);
+  const [isAddToQueueDialogOpen, setIsAddToQueueDialogOpen] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [selectedSong, setSelectedSong] = useState<CatalogSong | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -64,6 +71,11 @@ export function CatalogManagement() {
   const lyricsForm = useForm<z.infer<typeof lyricsSchema>>({
     resolver: zodResolver(lyricsSchema),
     defaultValues: { artistId: '', songId: '', title: '', lyrics: '' },
+  });
+
+  const addToQueueForm = useForm<z.infer<typeof addToQueueSchema>>({
+    resolver: zodResolver(addToQueueSchema),
+    defaultValues: { singer: '' },
   });
 
   const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
@@ -151,6 +163,29 @@ export function CatalogManagement() {
     });
   };
 
+  const handleAddToQueue = (values: z.infer<typeof addToQueueSchema>) => {
+    if (!selectedArtist || !selectedSong || !user) return;
+    startTransition(() => {
+      const songData = {
+        singer: values.singer,
+        artistName: selectedArtist.name,
+        songTitle: selectedSong.title,
+        specialAnnouncement: '',
+        requestTime: Date.now(),
+        status: 'queued' as 'queued',
+        patronId: user.uid, // KJ is the patron in this case
+      };
+      const requestsCol = collection(firestore, 'song_requests');
+      addDocumentNonBlocking(requestsCol, songData);
+      toast({
+        title: 'Song Added!',
+        description: `"${selectedSong.title}" for ${values.singer} is in the queue.`
+      });
+      addToQueueForm.reset();
+      setIsAddToQueueDialogOpen(false);
+    });
+  };
+
 
   const openSongDialog = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -166,6 +201,12 @@ export function CatalogManagement() {
     lyricsForm.setValue('title', song.title);
     lyricsForm.setValue('lyrics', song.lyrics || '');
     setIsLyricsDialogOpen(true);
+  };
+
+  const openAddToQueueDialog = (artist: Artist, song: CatalogSong) => {
+    setSelectedArtist(artist);
+    setSelectedSong(song);
+    setIsAddToQueueDialogOpen(true);
   };
 
   if (isLoading) {
@@ -265,6 +306,10 @@ export function CatalogManagement() {
                         <span className={cn(!song.isAvailable && "line-through")}>{song.title}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openAddToQueueDialog(artist, song)}>
+                            <ListPlus className="h-4 w-4 text-primary" />
+                            <span className="sr-only">Add to Queue</span>
+                        </Button>
                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openLyricsDialog(artist, song)}>
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit Lyrics</span>
@@ -365,8 +410,39 @@ export function CatalogManagement() {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        <Dialog open={isAddToQueueDialogOpen} onOpenChange={setIsAddToQueueDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Add to Queue</DialogTitle>
+                <DialogDescription>
+                    Adding "{selectedSong?.title}" by {selectedArtist?.name}.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...addToQueueForm}>
+              <form onSubmit={addToQueueForm.handleSubmit(handleAddToQueue)} className="space-y-4">
+                <FormField control={addToQueueForm.control} name="singer" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Singer's Name</FormLabel>
+                    <FormControl><Input placeholder="e.g., Jane D." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <DialogFooter>
+                  <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                  <Button type="submit" disabled={isPending}>
+                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isPending ? "Adding..." : "Add to Queue"}
+                    </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
       </CardContent>
     </Card>
   );
 }
+
+    
