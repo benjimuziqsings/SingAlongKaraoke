@@ -10,7 +10,7 @@ import { useUser, useFirestore, useAuth, initiateAnonymousSignIn } from '@/fireb
 import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
-
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,15 +32,22 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Music, PlusCircle } from 'lucide-react';
+import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from './ui/skeleton';
 
 const songRequestSchema = z.object({
   singer: z.string().min(1, { message: 'Your name is required.' }),
@@ -65,9 +72,10 @@ export function SongRequestDialog() {
   const { user } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
+  const [artistPopoverOpen, setArtistPopoverOpen] = useState(false);
+  const [songPopoverOpen, setSongPopoverOpen] = useState(false);
 
   const artists = allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable));
-
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),
@@ -100,10 +108,9 @@ export function SongRequestDialog() {
     } else {
       setSongs([]);
     }
-  }, [selectedArtist]);
+  }, [selectedArtist, artists, catalogForm]);
 
   useEffect(() => {
-    // Pre-fill singer name if user is logged in
     if (user?.displayName) {
         catalogForm.setValue('singer', user.displayName);
         suggestionForm.setValue('singer', user.displayName);
@@ -113,7 +120,6 @@ export function SongRequestDialog() {
 
   const handleSubmit = (songData: any) => {
     if (!user) {
-        // If not logged in, sign in anonymously first
         if (auth) {
           initiateAnonymousSignIn(auth);
         }
@@ -154,7 +160,6 @@ export function SongRequestDialog() {
   }
 
   function onSuggestionSubmit(values: z.infer<typeof suggestionSchema>) {
-    // In a real app, you'd also handle the payment flow here.
     handleSubmit({
         singer: values.singer,
         artistName: values.artist,
@@ -212,22 +217,61 @@ export function SongRequestDialog() {
                   control={catalogForm.control}
                   name="artist"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Artist</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger disabled={isCatalogLoading}>
-                            <SelectValue placeholder={isCatalogLoading ? "Loading artists..." : "Select an artist"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {artists.map(artist => (
-                            <SelectItem key={artist.id} value={artist.name}>
-                              {artist.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                       {isCatalogLoading ? <Skeleton className="h-10 w-full" /> : (
+                        <Popover open={artistPopoverOpen} onOpenChange={setArtistPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value
+                                  ? artists.find(
+                                      (artist) => artist.name === field.value
+                                    )?.name
+                                  : "Select an artist"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search artist..." />
+                              <CommandList>
+                                <CommandEmpty>No artist found.</CommandEmpty>
+                                <CommandGroup>
+                                  {artists.map((artist) => (
+                                    <CommandItem
+                                      value={artist.name}
+                                      key={artist.id}
+                                      onSelect={() => {
+                                        catalogForm.setValue("artist", artist.name)
+                                        setArtistPopoverOpen(false)
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          artist.name === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      {artist.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                       )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -236,22 +280,60 @@ export function SongRequestDialog() {
                   control={catalogForm.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Song</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedArtist}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a song" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {songs.map(song => (
-                            <SelectItem key={song.title} value={song.title}>
-                              {song.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                       <Popover open={songPopoverOpen} onOpenChange={setSongPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={!selectedArtist}
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value
+                                ? songs.find(
+                                    (song) => song.title === field.value
+                                  )?.title
+                                : "Select a song"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search song..." />
+                             <CommandList>
+                              <CommandEmpty>No song found.</CommandEmpty>
+                              <CommandGroup>
+                                {songs.map((song) => (
+                                  <CommandItem
+                                    value={song.title}
+                                    key={song.title}
+                                    onSelect={() => {
+                                      catalogForm.setValue("title", song.title)
+                                      setSongPopoverOpen(false)
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        song.title === field.value
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {song.title}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -279,7 +361,7 @@ export function SongRequestDialog() {
                     </Button>
                   </DialogClose>
                   <Button type="submit" disabled={catalogForm.formState.isSubmitting}>
-                    {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
+                    {catalogForm.formSate.isSubmitting ? 'Submitting...' : 'Add to Queue'}
                   </Button>
                 </DialogFooter>
               </form>
