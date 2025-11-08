@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
-import Link from 'next/link';
 import { useAuth, initiateEmailSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,8 +22,8 @@ const formSchema = z.object({
   email: z.string().email({
     message: 'Invalid email address.',
   }),
-  password: z.string().min(6, {
-    message: 'Password must be at least 6 characters.',
+  password: z.string().min(1, {
+    message: 'Password is required.',
   }),
 });
 
@@ -46,6 +45,7 @@ export function LoginForm() {
       toast({ variant: 'destructive', title: 'Error', description: 'Authentication service is not available.' });
       return;
     }
+    // Errors are now handled inside initiateEmailSignIn with toasts
     initiateEmailSignIn(auth, values.email, values.password);
   }
 
@@ -72,12 +72,6 @@ export function LoginForm() {
             <FormItem>
               <div className="flex items-center justify-between">
                 <FormLabel>Password</FormLabel>
-                <Link
-                  href="#"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Forgot Password?
-                </Link>
               </div>
               <div className="relative">
                 <FormControl>
