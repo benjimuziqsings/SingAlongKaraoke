@@ -9,6 +9,9 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { FirestorePermissionError } from './errors';
 import { errorEmitter } from './error-emitter';
 
+// Define the list of admin emails
+const ADMIN_EMAILS = ['benjimuziqsings@gmail.com', 'benjaminbailey98@gmail.com'];
+
 interface FirebaseProviderProps {
   children: ReactNode;
   firebaseApp: FirebaseApp;
@@ -89,7 +92,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       async (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
           const tokenResult = await firebaseUser.getIdTokenResult();
-          const isKJ = tokenResult.claims.isKJ === true;
+          
+          // Check for KJ status via custom claim OR by checking the hardcoded email list
+          const hasKJClaim = tokenResult.claims.isKJ === true;
+          const isEmailAdmin = firebaseUser.email ? ADMIN_EMAILS.includes(firebaseUser.email) : false;
+          const isKJ = hasKJClaim || isEmailAdmin;
 
           const patronDocRef = doc(firestore, 'patrons', firebaseUser.uid);
           const patronData = {
