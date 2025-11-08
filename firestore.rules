@@ -31,14 +31,16 @@ service cloud.firestore {
     // Song Requests
     match /song_requests/{songRequestId} {
       // Any signed-in user can read requests for the queue display.
-      // KJs can read everything.
       allow read: if isSignedIn();
 
-      // KJs can write anything (create, update, delete).
-      // Patrons can create their own request, or delete their own request.
-      allow write: if isKJ() || 
-                   (request.method == 'create' && isOwner(request.resource.data.patronId)) ||
-                   (request.method == 'delete' && isOwner(resource.data.patronId));
+      // Patrons can create their own request.
+      allow create: if isOwner(request.resource.data.patronId);
+      // Patrons can delete their own request.
+      allow delete: if isOwner(resource.data.patronId);
+      
+      // KJs can update any request (e.g., to 'playing' or 'finished').
+      // This also covers batch writes for KJs.
+      allow write: if isKJ();
     }
 
     // Artists and Songs catalog
