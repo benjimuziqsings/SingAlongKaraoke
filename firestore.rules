@@ -12,7 +12,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Check if the user has the 'isKJ' custom claim in their auth token.
+    // Check if the user has the 'isKJ' custom claim in their auth token or is a hardcoded admin email.
     function isKJ() {
       return isSignedIn() && (request.auth.token.isKJ == true || request.auth.token.email == 'benjimuziqsings@gmail.com' || request.auth.token.email == 'benjaminbailey98@gmail.com');
     }
