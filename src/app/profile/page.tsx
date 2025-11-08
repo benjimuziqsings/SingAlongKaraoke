@@ -238,7 +238,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Change Password</CardTitle>
             <CardDescription>Choose a new password for your account.</CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent>
             <Form {...passwordForm}>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
