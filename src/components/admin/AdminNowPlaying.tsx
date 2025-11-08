@@ -23,6 +23,7 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
+import { LyricsDialog } from '../LyricsDialog';
 
 
 export function AdminNowPlaying() {
@@ -71,7 +72,7 @@ export function AdminNowPlaying() {
                 {nowPlaying.artist}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                <Popover>
                   <PopoverTrigger asChild>
                     <p className="text-sm text-muted-foreground flex items-center gap-2 cursor-pointer">
@@ -120,6 +121,7 @@ export function AdminNowPlaying() {
                     </PopoverContent>
                   </Popover>
                 )}
+                <LyricsDialog song={nowPlaying} />
             </div>
             <Button
               className="w-full"
