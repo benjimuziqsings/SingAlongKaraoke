@@ -28,15 +28,13 @@ service cloud.firestore {
     // Song Requests
     match /song_requests/{songRequestId} {
       allow read: if isSignedIn();
+      // Patrons can create their own requests.
       allow create: if isOwner(request.resource.data.patronId);
+      // Patrons can delete their own requests, KJs can delete any.
       allow delete: if isOwner(resource.data.patronId) || isKJ();
+      // Only the KJ can update a request (e.g., change status to 'playing').
       allow update: if isKJ();
     }
-    
-    match /song_requests/{songRequestId} {
-        allow write: if isKJ();
-    }
-
 
     // Artists and Songs catalog
     match /artists/{artistId} {
