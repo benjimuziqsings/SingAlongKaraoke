@@ -19,14 +19,9 @@ service cloud.firestore {
 
     // Patrons
     match /patrons/{patronId} {
-      // A KJ can read any patron's profile.
-      // Users can read their own profile.
       allow read: if isOwner(patronId) || isKJ();
-      // A user can create their own profile document.
       allow create: if isOwner(patronId);
-      // A user can update their own profile document.
       allow update: if isOwner(patronId);
-      // No one can delete a patron document directly for now.
       allow delete: if false;
     }
     
@@ -37,6 +32,11 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.patronId) || isKJ();
       allow update: if isKJ();
     }
+    
+    match /song_requests/{songRequestId} {
+        allow write: if isKJ();
+    }
+
 
     // Artists and Songs catalog
     match /artists/{artistId} {
@@ -74,5 +74,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

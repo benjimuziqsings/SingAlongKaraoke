@@ -53,12 +53,14 @@ export function AdminQueue() {
       if (!firestore) return;
 
       try {
+        const batch = writeBatch(firestore);
+
         // 1. If a song is currently playing, set its status to 'finished'.
         if (nowPlaying) {
           for (const requester of nowPlaying.requesters) {
             if (requester.originalId) {
               const oldSongRef = doc(firestore, 'song_requests', requester.originalId);
-              await updateDoc(oldSongRef, { status: 'finished' });
+              batch.update(oldSongRef, { status: 'finished' });
             }
           }
         }
@@ -67,9 +69,11 @@ export function AdminQueue() {
         for (const requester of song.requesters) {
           if (requester.originalId) {
             const newSongRef = doc(firestore, 'song_requests', requester.originalId);
-            await updateDoc(newSongRef, { status: 'playing' });
+            batch.update(newSongRef, { status: 'playing' });
           }
         }
+        
+        await batch.commit();
 
         toast({
           title: 'Now Playing!',
@@ -80,9 +84,9 @@ export function AdminQueue() {
         // This will catch any permission errors from the individual updates.
         console.error("Error updating song statuses:", error);
         const permissionError = new FirestorePermissionError({
-          path: `song_requests/${song.id}`,
+          path: `song_requests (batch operation)`,
           operation: 'update',
-          requestResourceData: { status: 'playing' }
+          requestResourceData: { status: 'playing/finished' }
         });
         errorEmitter.emit('permission-error', permissionError);
       }
@@ -271,7 +275,7 @@ export function AdminQueue() {
                       disabled={isPending}
                       aria-label="Play next"
                     >
-                      <Play className="h-5 w-5" />
+                      {isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Play className="h-5 w-5" />}
                     </Button>
                     <Button
                       size="icon"

@@ -40,10 +40,11 @@ export default function ReviewsPage() {
 
 function ReviewsList() {
     const firestore = useFirestore();
-    const reviewsQuery = useMemoFirebase(() => 
-        query(collection(firestore, 'reviews'), orderBy('createdAt', 'desc')), 
-        [firestore]
-    );
+    const reviewsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'reviews'), orderBy('createdAt', 'desc'))
+    }, [firestore]);
+    
     const { data: reviews, isLoading } = useCollection<Review>(reviewsQuery);
     
     if (isLoading) {
@@ -63,7 +64,7 @@ function ReviewsList() {
                                         {review.name}
                                     </CardTitle>
                                     <CardDescription>
-                                        {review.createdAt ? formatDistanceToNow(review.createdAt, { addSuffix: true }) : 'just now'}
+                                        {review.createdAt ? formatDistanceToNow(new Date(review.createdAt), { addSuffix: true }) : 'just now'}
                                     </CardDescription>
                                 </div>
                                 <div className="flex items-center gap-1">
