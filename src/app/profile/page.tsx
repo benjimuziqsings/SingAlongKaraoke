@@ -5,10 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useAuth, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useAuth, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { updatePassword } from 'firebase/auth';
 import { doc, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Song, GroupedSong } from '@/lib/types';
 import { Suspense, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
@@ -20,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { SongQueue } from '@/components/SongQueue';
 import { History } from 'lucide-react';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const profileSchema = z.object({
@@ -161,9 +161,9 @@ export default function ProfilePage() {
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     if (!user || !patronDocRef) return;
-    updateDocumentNonBlocking(patronDocRef, {
-        telephone: values.telephone,
-    });
+    const dataToUpdate = { telephone: values.telephone };
+    
+    updateDocumentNonBlocking(patronDocRef, dataToUpdate);
     toast({ title: 'Profile Updated!', description: 'Your information has been saved.' });
   }
 
@@ -238,7 +238,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Change Password</CardTitle>
             <CardDescription>Choose a new password for your account.</CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent>
             <Form {...passwordForm}>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
