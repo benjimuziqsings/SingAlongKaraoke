@@ -32,8 +32,9 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.patronId);
       // Patrons can delete their own requests, KJs can delete any.
       allow delete: if isOwner(resource.data.patronId) || isKJ();
-      // Only the KJ can update a request (e.g., change status to 'playing').
-      allow update: if isKJ();
+      // KJs can update any request (e.g., to 'playing', 'held', or 'finished').
+      // Patrons can only update their own requests if they are still 'queued'.
+      allow update: if isKJ() || (isOwner(resource.data.patronId) && resource.data.status == 'queued');
     }
 
     // Artists and Songs catalog
