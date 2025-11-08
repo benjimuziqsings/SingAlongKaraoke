@@ -24,16 +24,16 @@ function ReviewsLoadingSkeleton() {
 
 export default function ReviewsPage() {
     return (
-        <div className="flex flex-col min-h-screen bg-transparent">
+        <div className="flex flex-col flex-1 bg-transparent">
             <Header />
-            <main className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
+            <div className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
                 <h1 className="font-headline text-4xl mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
                     Patron Reviews
                 </h1>
                 <Suspense fallback={<ReviewsLoadingSkeleton />}>
                     <ReviewsList />
                 </Suspense>
-            </main>
+            </div>
         </div>
     );
 }

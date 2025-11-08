@@ -1,14 +1,16 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail } from 'lucide-react';
+import Link from 'next/link';
 
 export default function FacebookDataDeletionPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-transparent">
+    <div className="flex flex-col flex-1 bg-transparent">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
+      <div className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-3xl">
@@ -23,7 +25,7 @@ export default function FacebookDataDeletionPage() {
               Sing A Long Karaoke uses your Facebook account for authentication purposes. When you sign in with Facebook, we receive your basic public profile information, such as your name and email address. This information is used to create and identify your user account within our app.
             </p>
             <p>
-              We do not store your Facebook password. All song requests, reviews, or tips you submit are associated with your user account ID.
+              We do not store your Facebook password. All song requests, reviews, or tips you submit are associated with your user account ID. For more details on the data we collect and how we use it, please see our full <Link href="/privacy/policy" className="text-primary hover:underline">Privacy Policy</Link>.
             </p>
             
             <h3 className="font-bold text-lg pt-4">How to Request Data Deletion</h3>
@@ -44,7 +46,7 @@ export default function FacebookDataDeletionPage() {
             </p>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

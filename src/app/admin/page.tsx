@@ -20,9 +20,9 @@ function AdminLoadingSkeleton() {
 
 export default function AdminPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-transparent">
+    <div className="flex flex-col flex-1 bg-transparent">
       <Header isAdmin />
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <div className="flex-grow container mx-auto px-4 py-8">
         <h1 className="font-headline text-4xl mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
           KJ Dashboard
         </h1>
@@ -43,7 +43,7 @@ export default function AdminPage() {
             </TabsContent>
           </Tabs>
         </Suspense>
-      </main>
+      </div>
     </div>
   );
 }

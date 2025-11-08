@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from '@/components/Header';
@@ -32,7 +33,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
+      <div className="flex-grow container mx-auto px-4 py-8 max-w-3xl">
         <Suspense fallback={<QueueLoadingSkeleton />}>
           {isLoading ? (
             <QueueLoadingSkeleton />
@@ -49,7 +50,7 @@ export default function HomePage() {
             </div>
           )}
         </Suspense>
-      </main>
+      </div>
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border p-4 z-10">
         <div className="container mx-auto max-w-3xl grid grid-cols-2 lg:grid-cols-3 gap-4">
           <SongRequestDialog />

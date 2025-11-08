@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { FirebaseClientProvider } from '@/firebase';
+import Link from 'next/link';
 
 export default function RootLayout({
   children,
@@ -39,7 +40,14 @@ export default function RootLayout({
           />
         )}
         <FirebaseClientProvider>
-            <div className="flex-1">{children}</div>
+            <div className="flex-1 flex flex-col">
+              <main className="flex-1">{children}</main>
+              <footer className="py-4 px-6 text-center text-sm text-muted-foreground">
+                <Link href="/privacy/policy" className="hover:text-primary underline">
+                  Privacy Policy
+                </Link>
+              </footer>
+            </div>
         </FirebaseClientProvider>
         <Toaster />
       </body>
