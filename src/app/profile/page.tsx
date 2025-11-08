@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useAuth, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useAuth, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { updatePassword } from 'firebase/auth';
 import { doc, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { Song, GroupedSong } from '@/lib/types';
@@ -154,6 +154,12 @@ export default function ProfilePage() {
           const patronData = docSnap.data();
           profileForm.setValue('telephone', patronData.telephone || '');
         }
+      }).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+          path: patronDocRef.path,
+          operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
     }
   }, [patronDocRef, user, profileForm]);
