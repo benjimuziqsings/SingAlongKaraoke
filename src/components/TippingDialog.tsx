@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, PartyPopper } from 'lucide-react';
+import { DollarSign, PartyPopper, CreditCard } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
@@ -28,12 +28,6 @@ const tipAmounts = [2, 5, 10, 15, 20];
 function CashAppIcon() {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.41 14.59L9 16V8h1.5l1.5 3 1.5-3H15v8l-1.59-1.59L12 16l-1.41-1.41z"/></svg>
-    )
-}
-
-function ApplePayIcon() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M16.71,18.29a3,3,0,0,0-2.3,1.14,3.33,3.33,0,0,0-4.69,0,3,3,0,0,0-2.3-1.14,3,3,0,0,0-2.42,2.42,3.12,3.12,0,0,0,0,.69,3,3,0,0,0,1.15,2.3,3.33,3.33,0,0,0,4.69,0,3,3,0,0,0,2.3,1.14,3,3,0,0,0,2.42-2.42A3.12,3.12,0,0,0,18,20.71,3,3,0,0,0,16.71,18.29Zm-4.83.56a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,11.88,18.85Z"/><path d="M15.5,2.5a3,3,0,0,0-3-3,5.43,5.43,0,0,0-3.83,1.6,5.27,5.27,0,0,0-1.84,4.12,1,1,0,0,0,1,1,1,1,0,0,0,1-1,3.27,3.27,0,0,1,1.1-2.58A3.43,3.43,0,0,1,12.5,2.5a1,1,0,0,1,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1-1A3,3,0,0,0,15.5,2.5Z"/></svg>
     )
 }
 
@@ -87,8 +81,11 @@ export function TippingDialog() {
     if (method === 'Zelle') {
         description = 'Please use your banking app to send a Zelle payment to: benjimuziqsings@gmail.com';
     }
+     if (method === 'Card') {
+        description = "We're working on adding a secure way to pay with credit card. Please check back soon!";
+    }
     toast({
-        title: method === 'Zelle' ? 'Tip with Zelle' : `${method} Coming Soon!`,
+        title: method === 'Zelle' ? 'Tip with Zelle' : `${method} Payments Coming Soon!`,
         description: description,
     });
   }
@@ -117,16 +114,12 @@ export function TippingDialog() {
         <div className="py-4 space-y-6">
           <div className="space-y-2">
             <Label>Send via payment app:</Label>
-             <div className="grid grid-cols-3 gap-3">
+             <div className="grid grid-cols-2 gap-3">
                  <Button asChild variant="outline" className="py-6 text-lg bg-green-500/10 border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-400">
                     <Link href="https://cash.app/$benjimuziqsings" target="_blank">
                         <CashAppIcon />
                         <span className="ml-2">Cash App</span>
                     </Link>
-                </Button>
-                 <Button variant="outline" className="py-6 text-lg bg-white/10 border-white/50 text-white hover:bg-white/20 hover:text-white" onClick={() => handleOtherPayment('Apple Pay')}>
-                    <ApplePayIcon />
-                    <span className="ml-2">Apple Pay</span>
                 </Button>
                  <Button variant="outline" className="py-6 text-lg bg-purple-500/10 border-purple-500/50 text-purple-400 hover:bg-purple-500/20 hover:text-purple-400" onClick={() => handleOtherPayment('Zelle')}>
                     <ZelleIcon />
@@ -150,6 +143,10 @@ export function TippingDialog() {
                     ${amount}
                   </Button>
                 ))}
+                <Button variant="outline" className="py-6 text-lg flex-col h-auto" onClick={() => handleOtherPayment('Card')}>
+                    <CreditCard className="h-6 w-6" />
+                    <span className="mt-1">Pay with Card</span>
+                </Button>
               </div>
           </div>
           <div className="space-y-2">
