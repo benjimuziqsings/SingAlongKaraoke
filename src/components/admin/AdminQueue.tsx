@@ -150,36 +150,29 @@ export function AdminQueue() {
       const q = query(collection(firestore, 'song_requests'), where('status', '==', statusToClear));
       
       try {
-        const querySnapshot = await getDocs(q).catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: 'song_requests',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
-        });
+        const querySnapshot = await getDocs(q);
 
         const batch = writeBatch(firestore);
         querySnapshot.forEach((doc) => {
           batch.delete(doc.ref);
         });
         
-        await batch.commit().catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: 'song_requests (batch delete)',
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
-        });
+        await batch.commit();
 
         toast({ title: 'Success', description: `The ${listName} has been cleared.` });
         if (refetch) refetch();
 
-      } catch (error) {
-        // Errors are now emitted, so we just log for server-side debugging if needed.
-        // No user-facing toast is needed here as the listener will handle it.
-        console.error(`Error clearing ${listName}:`, error);
+      } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            const operation = error.customData?.operation || (error.message.includes('get') ? 'list' : 'delete');
+            const permissionError = new FirestorePermissionError({
+                path: 'song_requests',
+                operation: operation,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+             console.error(`Error clearing ${listName}:`, error);
+        }
       }
     });
   };
@@ -454,3 +447,5 @@ export function AdminQueue() {
     </>
   );
 }
+
+    
