@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth, initiateEmailSignUp } from '@/firebase';
+import { useAuth, initiateEmailSignUp, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile } from 'firebase/auth';
 
@@ -51,16 +51,22 @@ export function RegisterForm() {
       return;
     }
     try {
-      // initiateEmailSignUp doesn't return the user credential, so we handle profile updates via onAuthStateChanged listener in provider
+      // initiateEmailSignUp now handles its own errors via toasts and re-throws
       await initiateEmailSignUp(auth, values.email, values.password, values.displayName);
-      // The redirect will be handled by the AuthHandler in the provider
+      // The redirect is handled by the onAuthStateChanged listener in the Firebase provider
     } catch (error: any) {
-      console.error("Registration Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: error.message || "An unexpected error occurred.",
-      });
+      // This catch block is primarily for errors that might not be handled within initiateEmailSignUp,
+      // though that function is designed to be self-contained. This provides a fallback.
+      // Firebase auth errors are already toasted inside initiateEmailSignUp.
+      // This could catch other unexpected issues.
+      if (error.name !== 'FirebaseError') { // Avoid double-toasting auth errors
+        console.error("Registration Error:", error);
+        toast({
+          variant: "destructive",
+          title: "Registration Failed",
+          description: error.message || "An unexpected error occurred during registration.",
+        });
+      }
     }
   }
 
