@@ -16,14 +16,18 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, PartyPopper, CreditCard } from 'lucide-react';
+import { DollarSign, PartyPopper, CreditCard, Loader2 } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
 import { Separator } from './ui/separator';
 import Link from 'next/link';
+import { loadStripe } from '@stripe/stripe-js';
 
 const tipAmounts = [2, 5, 10, 15, 20];
+
+// Make sure to replace this with your actual public key
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 function CashAppIcon() {
     return (
@@ -41,6 +45,7 @@ function ZelleIcon() {
 export function TippingDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -70,25 +75,76 @@ export function TippingDialog() {
 
     toast({
       title: 'Thank You!',
-      description: `You've tipped $${amount}. We appreciate your support!`,
+      description: `Your tip of $${amount} has been logged. We appreciate your support!`,
     });
     setCustomAmount('');
     setIsOpen(false);
   };
-  
-  const handleOtherPayment = (method: string) => {
-    let description = `We're working on integrating ${method} for tipping.`;
-    if (method === 'Zelle') {
-        description = 'Please use your banking app to send a Zelle payment to: benjimuziqsings@gmail.com';
-    }
-     if (method === 'Card') {
-        description = "We're working on adding a secure way to pay with credit card. Please check back soon!";
-    }
+
+  const handleZellePayment = () => {
     toast({
-        title: method === 'Zelle' ? 'Tip with Zelle' : `${method} Payments Coming Soon!`,
-        description: description,
+        title: 'Tip with Zelle',
+        description: 'Please use your banking app to send a Zelle payment to: benjimuziqsings@gmail.com',
     });
   }
+
+  const handleStripeCheckout = async (amount: number) => {
+    if (!user) {
+      toast({
+        title: 'Please Sign In',
+        description: 'You need to be signed in to send a tip.'
+      });
+      return;
+    }
+    if (amount <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Amount',
+        description: 'Please enter a valid tip amount.'
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/checkout_sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      const { sessionId, error } = await response.json();
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe.js has not loaded yet.');
+      }
+      
+      handleTip(amount); // Log the tip attempt in Firestore
+
+      const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+
+      if (stripeError) {
+        throw stripeError;
+      }
+    } catch (error: any) {
+      console.error('Stripe checkout error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Payment Error',
+        description: error.message || 'Could not process payment. Please try again.',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -121,7 +177,7 @@ export function TippingDialog() {
                         <span className="ml-2">Cash App</span>
                     </Link>
                 </Button>
-                 <Button variant="outline" className="py-6 text-lg bg-purple-500/10 border-purple-500/50 text-purple-400 hover:bg-purple-500/20 hover:text-purple-400" onClick={() => handleOtherPayment('Zelle')}>
+                 <Button variant="outline" className="py-6 text-lg bg-purple-500/10 border-purple-500/50 text-purple-400 hover:bg-purple-500/20 hover:text-purple-400" onClick={handleZellePayment}>
                     <ZelleIcon />
                      <span className="ml-2">Zelle</span>
                 </Button>
@@ -131,26 +187,24 @@ export function TippingDialog() {
           <Separator />
           
           <div>
-              <Label>Select an amount (USD):</Label>
+              <Label>One-click tip with Card:</Label>
               <div className="grid grid-cols-3 gap-3 mt-2">
                 {tipAmounts.map((amount) => (
                   <Button
                     key={amount}
                     variant="outline"
                     className="py-6 text-lg"
-                    onClick={() => handleTip(amount)}
+                    onClick={() => handleStripeCheckout(amount)}
+                    disabled={isProcessing}
                   >
-                    ${amount}
+                    {isProcessing ? <Loader2 className="animate-spin" /> : `$${amount}`}
                   </Button>
                 ))}
-                <Button variant="outline" className="py-6 text-lg flex-col h-auto" onClick={() => handleOtherPayment('Card')}>
-                    <CreditCard className="h-6 w-6" />
-                    <span className="mt-1">Pay with Card</span>
-                </Button>
               </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="custom-tip">Or a custom amount:</Label>
+            <Label htmlFor="custom-tip">Or a custom amount with Card:</Label>
             <div className="flex gap-2">
               <Input
                 id="custom-tip"
@@ -161,11 +215,12 @@ export function TippingDialog() {
                 className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <Button
-                onClick={() => handleTip(parseFloat(customAmount))}
-                disabled={!customAmount || parseFloat(customAmount) <= 0}
+                onClick={() => handleStripeCheckout(parseFloat(customAmount))}
+                disabled={isProcessing || !customAmount || parseFloat(customAmount) <= 0}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground"
               >
-                Tip
+                 {isProcessing ? <Loader2 className="animate-spin" /> : <CreditCard />}
+                 <span className="ml-2">Pay</span>
               </Button>
             </div>
           </div>
