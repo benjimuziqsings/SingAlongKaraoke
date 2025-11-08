@@ -89,7 +89,7 @@ export function useQueue(): UseQueueResult {
             // Add requester to existing group
             groupedSongs[key].requesters.push(requester);
             // If the new song is more recent, update the group's request time
-            if (song.requestTime > groupedSongs[key].requestTime) {
+            if (song.requestTime < groupedSongs[key].requestTime) {
                 groupedSongs[key].requestTime = song.requestTime;
             }
             // Also update the status to the most current one
@@ -113,7 +113,15 @@ export function useQueue(): UseQueueResult {
     const nowPlaying = allSongs.find(song => song.status === 'playing') || null;
     const upcoming = allSongs
         .filter(song => song.status === 'queued')
-        .sort((a, b) => a.requestTime - b.requestTime);
+        .sort((a, b) => {
+            // Sort by number of requesters descending
+            const requestersDiff = b.requesters.length - a.requesters.length;
+            if (requestersDiff !== 0) {
+                return requestersDiff;
+            }
+            // If requesters are equal, sort by request time ascending
+            return a.requestTime - b.requestTime;
+        });
     const held = allSongs
       .filter(song => song.status === 'held')
       .sort((a, b) => a.requestTime - b.requestTime);
