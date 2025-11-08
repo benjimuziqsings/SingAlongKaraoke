@@ -8,10 +8,11 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup,
+  signOut,
 } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
 
-function handleAuthError(error: any, context: 'sign-in' | 'sign-up' | 'social') {
+function handleAuthError(error: any, context: 'sign-in' | 'sign-up' | 'social' | 'sign-out') {
     console.error(`${context} Error:`, error);
     
     // Check if it's a Firebase error by looking for the 'code' property
@@ -117,4 +118,19 @@ export function initiateFacebookSignIn(authInstance: Auth): void {
   signInWithPopup(authInstance, provider).catch(error => {
     handleAuthError(error, 'social');
   });
+}
+
+/** Initiate sign-out (non-blocking). */
+export function initiateSignOut(authInstance: Auth): void {
+  signOut(authInstance)
+    .then(() => {
+      toast({
+        title: 'Signed Out',
+        description: "You have been successfully signed out.",
+      });
+      // Redirect is handled by onAuthStateChanged listener
+    })
+    .catch((error: any) => {
+      handleAuthError(error, 'sign-out');
+    });
 }

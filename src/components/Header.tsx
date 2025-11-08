@@ -1,15 +1,22 @@
 
 import Link from 'next/link';
-import { Mic, UserCog, Users, MessageSquareText, UserCircle } from 'lucide-react';
+import { Mic, UserCog, Users, MessageSquareText, UserCircle, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { QRCodeDialog } from './admin/QRCodeDialog';
-import { useUser } from '@/firebase';
+import { useUser, useAuth, initiateSignOut } from '@/firebase';
 
 export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
   const { user } = useUser();
+  const auth = useAuth();
   
   const adminEmails = ['benjaminbailey98@gmail.com', 'benjimuziqsings@gmail.com'];
   const isAuthorizedKJ = user && user.email && adminEmails.includes(user.email);
+
+  const handleLogout = () => {
+    if (auth) {
+      initiateSignOut(auth);
+    }
+  };
 
   return (
     <header className="py-3 px-4 md:px-6 border-b border-border/50 sticky top-0 bg-background/80 backdrop-blur-sm z-20">
@@ -30,12 +37,18 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
               </Link>
             </Button>
             {user && !isAdmin && (
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/profile">
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </Button>
+              <>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/profile">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              </>
             )}
             {isAdmin && <QRCodeDialog />}
           
