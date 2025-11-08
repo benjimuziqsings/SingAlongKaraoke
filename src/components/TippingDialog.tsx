@@ -83,9 +83,13 @@ export function TippingDialog() {
   };
   
   const handleOtherPayment = (method: string) => {
+    let description = `We're working on integrating ${method} for tipping.`;
+    if (method === 'Zelle') {
+        description = 'Please use your banking app to send a Zelle payment to: benjimuziqsings@gmail.com';
+    }
     toast({
-        title: `${method} Coming Soon!`,
-        description: `We're working on integrating ${method} for tipping.`,
+        title: method === 'Zelle' ? 'Tip with Zelle' : `${method} Coming Soon!`,
+        description: description,
     });
   }
 
@@ -115,7 +119,7 @@ export function TippingDialog() {
             <Label>Send via payment app:</Label>
              <div className="grid grid-cols-3 gap-3">
                  <Button asChild variant="outline" className="py-6 text-lg bg-green-500/10 border-green-500/50 text-green-400 hover:bg-green-500/20 hover:text-green-400">
-                    <Link href="https://cash.app/$yourcashtag" target="_blank">
+                    <Link href="https://cash.app/$benjimuziqsings" target="_blank">
                         <CashAppIcon />
                         <span className="ml-2">Cash App</span>
                     </Link>
