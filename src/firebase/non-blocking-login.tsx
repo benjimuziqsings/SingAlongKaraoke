@@ -6,7 +6,6 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
-  FacebookAuthProvider,
   signInWithPopup,
   signOut,
 } from 'firebase/auth';
@@ -107,14 +106,6 @@ export function initiateEmailSignIn(authInstance: Auth, email: string, password:
 /** Initiate Google sign-in (non-blocking). */
 export function initiateGoogleSignIn(authInstance: Auth): void {
   const provider = new GoogleAuthProvider();
-  signInWithPopup(authInstance, provider).catch(error => {
-    handleAuthError(error, 'social');
-  });
-}
-
-/** Initiate Facebook sign-in (non-blocking). */
-export function initiateFacebookSignIn(authInstance: Auth): void {
-  const provider = new FacebookAuthProvider();
   signInWithPopup(authInstance, provider).catch(error => {
     handleAuthError(error, 'social');
   });

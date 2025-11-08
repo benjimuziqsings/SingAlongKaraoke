@@ -10,10 +10,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Facebook, Mic } from 'lucide-react';
+import { Mic } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
-import { useAuth, initiateGoogleSignIn, initiateFacebookSignIn } from '@/firebase';
+import { useAuth, initiateGoogleSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon() {
@@ -31,7 +31,7 @@ export default function AuthPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const handleSignIn = (provider: 'google' | 'facebook') => {
+  const handleGoogleSignIn = () => {
     if (!auth) {
       toast({
         variant: 'destructive',
@@ -40,14 +40,7 @@ export default function AuthPage() {
       });
       return;
     }
-    switch (provider) {
-      case 'google':
-        initiateGoogleSignIn(auth);
-        break;
-      case 'facebook':
-        initiateFacebookSignIn(auth);
-        break;
-    }
+    initiateGoogleSignIn(auth);
   };
 
   return (
@@ -85,14 +78,10 @@ export default function AuthPage() {
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" onClick={() => handleSignIn('google')}>
+              <div className="grid grid-cols-1 gap-4">
+                <Button variant="outline" onClick={handleGoogleSignIn}>
                   <GoogleIcon />
                   <span className="ml-2">Google</span>
-                </Button>
-                <Button variant="outline" onClick={() => handleSignIn('facebook')}>
-                  <Facebook className="text-[#1877F2]" />
-                  <span className="ml-2">Facebook</span>
                 </Button>
               </div>
             </CardContent>

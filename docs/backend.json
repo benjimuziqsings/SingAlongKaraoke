@@ -193,8 +193,7 @@
   "auth": {
     "providers": [
       "password",
-      "google.com",
-      "facebook.com"
+      "google.com"
     ],
     "customClaims": {
       "isKJ": {

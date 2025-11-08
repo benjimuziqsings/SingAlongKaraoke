@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
                 <li>
-                  <strong>Personal Identification Information:</strong> Your name and email address, which we receive from the authentication provider you choose to sign in with (e.g., Google, Facebook, or email).
+                  <strong>Personal Identification Information:</strong> Your name and email address, which we receive from the authentication provider you choose to sign in with (e.g., Google or email).
                 </li>
                 <li>
                   <strong>User-Generated Content:</strong> Song requests, including song titles, artist names, and any special announcements you provide. We also collect any reviews or tips you submit.
@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="font-bold text-xl mb-2">Data Retention and Deletion</h2>
               <p>
-                We retain your song request history to populate your user profile. If you wish to delete your account and all associated data, you can request this by following the instructions on our <Link href="/privacy/facebook-data-deletion" className="text-primary hover:underline">Data Deletion page</Link>. We will process your request within 30 days.
+                We retain your song request history to populate your user profile. If you wish to delete your account and all associated data, you can send an email to <a href="mailto:support@example.com" className="text-primary hover:underline">support@example.com</a> to request deletion. We will process your request within 30 days.
               </p>
             </section>
             
