@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, setDoc } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Auth, User, onIdTokenChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { FirestorePermissionError } from './errors';
 import { errorEmitter } from './error-emitter';
@@ -20,6 +21,7 @@ interface UserAuthState {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  isKJ: boolean;
 }
 
 // Combined state for the Firebase context
@@ -32,6 +34,7 @@ export interface FirebaseContextState {
   user: User | null;
   isUserLoading: boolean; // True during initial auth check
   userError: Error | null; // Error from auth listener
+  isKJ: boolean;
 }
 
 // Return type for useFirebase()
@@ -42,13 +45,15 @@ export interface FirebaseServicesAndUser {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  isKJ: boolean;
 }
 
 // Return type for useUser() - specific to user auth state
-export interface UserHookResult { // Renamed from UserAuthHookResult for consistency if desired, or keep as UserAuthHookResult
+export interface UserHookResult {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  isKJ: boolean;
 }
 
 // React Context
@@ -67,21 +72,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     user: null,
     isUserLoading: true, // Start loading until first auth event
     userError: null,
+    isKJ: false,
   });
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) { // If no Auth service instance, cannot determine user state
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided."), isKJ: false });
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
+    setUserAuthState({ user: null, isUserLoading: true, userError: null, isKJ: false }); // Reset on auth instance change
 
-    const unsubscribe = onAuthStateChanged(
+    const unsubscribe = onIdTokenChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      async (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
+          const tokenResult = await firebaseUser.getIdTokenResult();
+          const isKJ = tokenResult.claims.isKJ === true;
+
           const patronDocRef = doc(firestore, 'patrons', firebaseUser.uid);
           const patronData = {
             id: firebaseUser.uid,
@@ -97,12 +106,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               });
               errorEmitter.emit('permission-error', permissionError);
             });
+          
+          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null, isKJ });
+        } else {
+          setUserAuthState({ user: null, isUserLoading: false, userError: null, isKJ: false });
         }
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        console.error("FirebaseProvider: onIdTokenChanged error:", error);
+        setUserAuthState({ user: null, isUserLoading: false, userError: error, isKJ: false });
       }
     );
     return () => unsubscribe(); // Cleanup
@@ -119,6 +131,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
+      isKJ: userAuthState.isKJ,
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
 
@@ -152,6 +165,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    isKJ: context.isKJ,
   };
 };
 
@@ -189,7 +203,7 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * This provides the User object, loading status, and any auth errors.
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
-export const useUser = (): UserHookResult => { // Renamed from useAuthUser
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
-  return { user, isUserLoading, userError };
+export const useUser = (): UserHookResult => {
+  const { user, isUserLoading, userError, isKJ } = useFirebase(); // Leverages the main hook
+  return { user, isUserLoading, userError, isKJ };
 };

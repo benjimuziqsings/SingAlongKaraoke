@@ -6,11 +6,8 @@ import { QRCodeDialog } from './admin/QRCodeDialog';
 import { useUser, useAuth, initiateSignOut } from '@/firebase';
 
 export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
-  const { user } = useUser();
+  const { user, isKJ } = useUser();
   const auth = useAuth();
-  
-  const adminEmails = ['benjaminbailey98@gmail.com', 'benjimuziqsings@gmail.com'];
-  const isAuthorizedKJ = user && user.email && adminEmails.includes(user.email);
 
   const handleLogout = () => {
     if (auth) {
@@ -36,7 +33,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                 Reviews
               </Link>
             </Button>
-            {user && !isAdmin && (
+            {user && (
               <>
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/profile">
@@ -52,7 +49,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
             )}
             {isAdmin && <QRCodeDialog />}
           
-          {isAuthorizedKJ && (
+          {isKJ && (
              <Button asChild variant="ghost" size="sm">
               {isAdmin ? (
                 <Link href="/home">

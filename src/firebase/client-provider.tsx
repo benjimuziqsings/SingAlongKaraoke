@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
-import { FirebaseProvider, useUser, useAuth } from '@/firebase/provider';
+import { FirebaseProvider, useUser } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,7 +27,7 @@ function GlobalLoadingSkeleton() {
 
 
 function AuthHandler({ children }: { children: ReactNode }) {
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading, isKJ } = useUser();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -38,11 +38,15 @@ function AuthHandler({ children }: { children: ReactNode }) {
     const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
 
     if (user && isAuthRoute) {
-      router.push('/home'); // Redirect logged-in users from auth pages to home
+      if (isKJ) {
+         router.push('/admin'); // Redirect KJs to admin dashboard
+      } else {
+         router.push('/home'); // Redirect logged-in users from auth pages to home
+      }
     } else if (!user && isProtectedRoute) {
       router.push('/'); // Redirect unauthenticated users from protected pages to login
     }
-  }, [isUserLoading, user, pathname, router]);
+  }, [isUserLoading, user, isKJ, pathname, router]);
 
   if (isUserLoading) {
     return <GlobalLoadingSkeleton />;
