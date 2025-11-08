@@ -22,9 +22,12 @@ service cloud.firestore {
       // A KJ can read any patron's profile.
       // Users can read their own profile.
       allow read: if isOwner(patronId) || isKJ();
-      // Users can update their own profile.
-      // A KJ can update any user's profile.
-      allow write: if isOwner(patronId) || isKJ();
+      // A user can create their own profile document.
+      allow create: if isOwner(patronId);
+      // A user can update their own profile, or a KJ can update any profile.
+      allow update: if isOwner(patronId) || isKJ();
+      // No one can delete a patron document directly for now.
+      allow delete: if false;
     }
     
     // Song Requests
