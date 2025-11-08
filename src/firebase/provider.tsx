@@ -5,6 +5,8 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, setDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { FirestorePermissionError } from './errors';
+import { errorEmitter } from './error-emitter';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -81,11 +83,20 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
           const patronDocRef = doc(firestore, 'patrons', firebaseUser.uid);
-          setDoc(patronDocRef, {
+          const patronData = {
             id: firebaseUser.uid,
             displayName: firebaseUser.displayName,
             email: firebaseUser.email,
-          }, { merge: true }).catch(console.error); // Create/update patron doc
+          };
+          setDoc(patronDocRef, patronData, { merge: true })
+            .catch(async (serverError) => {
+              const permissionError = new FirestorePermissionError({
+                path: patronDocRef.path,
+                operation: 'write',
+                requestResourceData: patronData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+            });
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
