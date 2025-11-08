@@ -30,19 +30,15 @@ service cloud.firestore {
     
     // Song Requests
     match /song_requests/{songRequestId} {
-      // Any signed-in user can read requests (for the queue display).
+      // Any signed-in user can read requests for the queue display.
+      // KJs can read everything.
       allow read: if isSignedIn();
-      // Only the user who created the request can create it.
-      allow create: if isOwner(request.resource.data.patronId);
-      // Only the KJ can update the status (e.g., to 'playing' or 'finished').
-      allow update: if isKJ();
-      // Only the KJ or the owner of the request can delete/remove a request.
-      allow delete: if isKJ() || isOwner(resource.data.patronId);
-    }
-    
-    // This rule allows the KJ to perform batch writes (like clearing the queue).
-    match /song_requests/{document=**} {
-        allow list, write: if isKJ();
+
+      // KJs can write anything (create, update, delete).
+      // Patrons can create their own request, or delete their own request.
+      allow write: if isKJ() || 
+                   (request.method == 'create' && isOwner(request.resource.data.patronId)) ||
+                   (request.method == 'delete' && isOwner(resource.data.patronId));
     }
 
     // Artists and Songs catalog
