@@ -35,12 +35,12 @@ service cloud.firestore {
 
       // Patrons can create their own request.
       allow create: if isOwner(request.resource.data.patronId);
+      
       // Patrons can delete their own request.
       allow delete: if isOwner(resource.data.patronId);
       
       // KJs can update any request (e.g., to 'playing' or 'finished').
-      // This also covers batch writes for KJs.
-      allow write: if isKJ();
+      allow update: if isKJ();
     }
 
     // Artists and Songs catalog
@@ -79,3 +79,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
