@@ -47,24 +47,26 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                 </Button>
               </>
             )}
-            {isAdmin && <QRCodeDialog />}
-          
-          {isKJ && (
-             <Button asChild variant="ghost" size="sm">
-              {isAdmin ? (
-                <Link href="/home">
-                  <Users className="mr-2 h-4 w-4" />
-                  Patron View
-                </Link>
+            
+            {isKJ && (
+              isAdmin ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/home">
+                    <Users className="mr-2 h-4 w-4" />
+                    Patron View
+                  </Link>
+                </Button>
               ) : (
-                <Link href="/admin">
-                  <UserCog className="mr-2 h-4 w-4" />
-                  KJ View
-                </Link>
-              )}
-            </Button>
-          )}
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/admin">
+                    <UserCog className="mr-2 h-4 w-4" />
+                    KJ View
+                  </Link>
+                </Button>
+              )
+            )}
 
+            {isAdmin && <QRCodeDialog />}
         </nav>
       </div>
     </header>
