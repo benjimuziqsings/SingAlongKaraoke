@@ -123,13 +123,11 @@ export function CatalogManagement() {
       
       try {
         const songsSnapshot = await getDocs(songsColRef).catch((serverError) => {
-          // This will catch a permissions error on the 'list' (getDocs) operation.
           const permissionError = new FirestorePermissionError({
             path: songsColRef.path,
             operation: 'list',
           });
           errorEmitter.emit('permission-error', permissionError);
-          // Re-throw to prevent further execution in the try block
           throw permissionError;
         });
 
@@ -139,22 +137,22 @@ export function CatalogManagement() {
         });
         batch.delete(artistRef);
         
-        await batch.commit().catch((serverError) => {
-          // This will catch a permissions error on the 'delete' (batch.commit) operation.
-          const permissionError = new FirestorePermissionError({
-              path: artistRef.path, // The primary path being operated on
-              operation: 'delete',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          // Re-throw to ensure the toast doesn't show success
-          throw permissionError;
-        });
+        await batch.commit();
 
         toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
       } catch (error) {
-        // This catch block now handles the re-thrown permission errors.
-        // The error is already emitted, so we just need to prevent the success toast.
-        console.error("Failed to remove artist:", error);
+        if (error instanceof FirestorePermissionError) {
+            // This error was already emitted, just prevent the success toast.
+            console.error("Permission error during artist removal:", error.message);
+        } else {
+            // This is likely a permission error on the batch.commit() itself.
+            const permissionError = new FirestorePermissionError({
+              path: `artists/${artistId} and subcollections`,
+              operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            console.error("Failed to remove artist:", error);
+        }
       }
     });
   };
