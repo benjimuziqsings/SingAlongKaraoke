@@ -1,12 +1,13 @@
 
 
+
 export type RequesterInfo = {
   singer: string;
   announcement?: string;
   originalId?: string;
 };
 
-export type SongStatus = 'queued' | 'playing' | 'finished' | 'removed';
+export type SongStatus = 'queued' | 'playing' | 'finished' | 'removed' | 'held';
 
 export type Song = {
   id: string;

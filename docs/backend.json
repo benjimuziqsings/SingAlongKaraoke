@@ -42,7 +42,8 @@
             "queued",
             "playing",
             "finished",
-            "removed"
+            "removed",
+            "held"
           ]
         }
       },

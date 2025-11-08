@@ -12,6 +12,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 export interface UseQueueResult {
   nowPlaying: GroupedSong | null;
   upcoming: GroupedSong[];
+  held: GroupedSong[];
   history: GroupedSong[];
   isLoading: boolean;
   error: Error | null;
@@ -68,9 +69,9 @@ export function useQueue(): UseQueueResult {
   }, [songRequestsQuery]);
   
 
-  const { nowPlaying, upcoming, history } = useMemo(() => {
+  const { nowPlaying, upcoming, held, history } = useMemo(() => {
     if (!songs) {
-      return { nowPlaying: null, upcoming: [], history: [] };
+      return { nowPlaying: null, upcoming: [], held: [], history: [] };
     }
     
     const groupedSongs: { [key: string]: GroupedSong } = {};
@@ -113,12 +114,15 @@ export function useQueue(): UseQueueResult {
     const upcoming = allSongs
         .filter(song => song.status === 'queued')
         .sort((a, b) => a.requestTime - b.requestTime);
+    const held = allSongs
+      .filter(song => song.status === 'held')
+      .sort((a, b) => a.requestTime - b.requestTime);
     const history = allSongs
         .filter(song => song.status === 'finished')
         .sort((a, b) => b.requestTime - a.requestTime);
 
-    return { nowPlaying, upcoming, history };
+    return { nowPlaying, upcoming, held, history };
   }, [songs]);
 
-  return { nowPlaying, upcoming, history, isLoading, error, refetch };
+  return { nowPlaying, upcoming, held, history, isLoading, error, refetch };
 }
