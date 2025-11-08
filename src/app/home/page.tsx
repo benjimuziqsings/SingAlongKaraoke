@@ -28,7 +28,7 @@ function QueueLoadingSkeleton() {
 
 
 export default function HomePage() {
-  const { nowPlaying, upcoming, history, isLoading } = useQueue();
+  const { nowPlaying, history, isLoading } = useQueue();
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
@@ -40,7 +40,6 @@ export default function HomePage() {
           ) : (
             <div className="space-y-8">
               <NowPlaying song={nowPlaying} />
-              <SongQueue songs={upcoming} title="Up Next" />
               {history.length > 0 && (
                 <>
                   <Separator className="my-12" />
