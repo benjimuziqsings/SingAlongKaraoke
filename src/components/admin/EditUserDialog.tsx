@@ -48,7 +48,7 @@ export function EditUserDialog({ patron, isOpen, setIsOpen }: EditUserDialogProp
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
-      displayName: patron.displayName,
+      displayName: patron.displayName || '',
       telephone: patron.telephone || '',
     },
   });
@@ -56,7 +56,7 @@ export function EditUserDialog({ patron, isOpen, setIsOpen }: EditUserDialogProp
   useEffect(() => {
     if(patron) {
         form.reset({
-            displayName: patron.displayName,
+            displayName: patron.displayName || '',
             telephone: patron.telephone || '',
         })
     }
