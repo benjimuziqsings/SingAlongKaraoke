@@ -12,9 +12,6 @@ import { Patron } from '@/lib/types';
 import { Button } from '../ui/button';
 import { EditUserDialog } from './EditUserDialog';
 
-// Replace with your actual deployed function URL
-const EMAIL_BLAST_FUNCTION_URL = process.env.NEXT_PUBLIC_EMAIL_BLAST_FUNCTION_URL;
-
 function UserManagementLoadingSkeleton() {
   return (
     <div className="space-y-4">
@@ -69,7 +66,6 @@ export function UserManagement() {
           <BlastDialog
             patrons={emailablePatrons}
             type="email"
-            functionUrl={EMAIL_BLAST_FUNCTION_URL}
             triggerButton={
               <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                 <Mail /> Email Blast
