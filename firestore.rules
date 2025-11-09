@@ -21,7 +21,7 @@ service cloud.firestore {
     match /patrons/{patronId} {
       allow read: if isOwner(patronId) || isKJ();
       allow create: if isOwner(patronId);
-      allow update: if isOwner(patronId);
+      allow update: if isOwner(patronId) || isKJ();
       allow delete: if false;
     }
     
