@@ -1,14 +1,15 @@
-
 'use client';
 
 import { usePatrons } from '@/hooks/usePatrons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Mail, MessageCircle, Users, Phone } from 'lucide-react';
+import { Mail, MessageCircle, Users, Phone, Edit } from 'lucide-react';
 import { BlastDialog } from './BlastDialog';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Patron } from '@/lib/types';
+import { Button } from '../ui/button';
+import { EditUserDialog } from './EditUserDialog';
 
 function UserManagementLoadingSkeleton() {
   return (
@@ -28,9 +29,16 @@ function UserManagementLoadingSkeleton() {
 
 export function UserManagement() {
   const { patrons, isLoading } = usePatrons();
+  const [selectedPatron, setSelectedPatron] = useState<Patron | null>(null);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
 
   const emailablePatrons = useMemo(() => patrons.filter(p => p.email), [patrons]);
   const textablePatrons = useMemo(() => patrons.filter(p => p.telephone), [patrons]);
+
+  const handleEditClick = (patron: Patron) => {
+    setSelectedPatron(patron);
+    setIsEditUserDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -46,6 +54,7 @@ export function UserManagement() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="font-headline text-2xl flex items-center gap-3">
@@ -81,6 +90,7 @@ export function UserManagement() {
                 <TableHead>Display Name</TableHead>
                 <TableHead><Mail className="inline h-4 w-4 mr-1"/>Email</TableHead>
                 <TableHead><Phone className="inline h-4 w-4 mr-1"/>Phone</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -89,6 +99,12 @@ export function UserManagement() {
                   <TableCell className="font-medium">{patron.displayName}</TableCell>
                   <TableCell>{patron.email || 'N/A'}</TableCell>
                   <TableCell>{patron.telephone || 'N/A'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(patron)}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit User</span>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -100,5 +116,14 @@ export function UserManagement() {
         )}
       </CardContent>
     </Card>
+
+    {selectedPatron && (
+      <EditUserDialog 
+        patron={selectedPatron}
+        isOpen={isEditUserDialogOpen}
+        setIsOpen={setIsEditUserDialogOpen}
+      />
+    )}
+    </>
   );
 }
