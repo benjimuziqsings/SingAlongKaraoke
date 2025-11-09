@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, MessageCircle, Send } from 'lucide-react';
+import { Mail, MessageCircle, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Patron } from '@/lib/types';
 
@@ -27,6 +27,7 @@ interface BlastDialogProps {
   patrons: Patron[];
   type: 'email' | 'sms';
   triggerButton: React.ReactElement;
+  functionUrl?: string;
 }
 
 const formSchema = z.object({
@@ -34,7 +35,7 @@ const formSchema = z.object({
   message: z.string().min(1, 'Message is required.'),
 });
 
-export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) {
+export function BlastDialog({ patrons, type, triggerButton, functionUrl }: BlastDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -45,10 +46,11 @@ export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) 
   const dialogTitle = type === 'email' ? 'Send Email Blast' : 'Send SMS Blast';
   const icon = type === 'email' ? <Mail /> : <MessageCircle />;
   const recipientCount = patrons.length;
-  const isSendDisabled = recipientCount === 0;
+  const isSendDisabled = recipientCount === 0 || form.formState.isSubmitting;
+  const useCloudFunction = type === 'email' && functionUrl;
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    if (isSendDisabled) {
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (recipientCount === 0) {
       toast({
         variant: 'destructive',
         title: 'No Recipients',
@@ -57,25 +59,50 @@ export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) 
       return;
     }
 
-    let url = '';
-    if (type === 'email') {
-      const emails = patrons.map(p => p.email).join(',');
-      const subject = encodeURIComponent(values.subject || '');
-      const body = encodeURIComponent(values.message);
-      url = `mailto:${emails}?subject=${subject}&body=${body}`;
-    } else { // sms
-      const numbers = patrons.map(p => p.telephone).join(',');
-      const body = encodeURIComponent(values.message);
-      url = `sms:${numbers}?&body=${body}`;
-    }
-    
-    // Open the default mail/sms client
-    window.location.href = url;
+    // Use server-side function for email if URL is provided
+    if (useCloudFunction) {
+      try {
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        });
 
-    toast({
-      title: 'Opening Client...',
-      description: `Your default ${type} application should open shortly.`,
-    });
+        if (!response.ok) {
+          throw new Error('Failed to send email blast.');
+        }
+
+        const result = await response.json();
+        toast({
+          title: 'Email Blast Sent!',
+          description: result.message || 'Your message has been queued for sending.',
+        });
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message || 'Could not send email blast.',
+        });
+      }
+    } else { // Fallback to local client for SMS or if email function not configured
+      let url = '';
+      if (type === 'email') {
+        const emails = patrons.map(p => p.email).join(',');
+        const subject = encodeURIComponent(values.subject || '');
+        const body = encodeURIComponent(values.message);
+        url = `mailto:${emails}?subject=${subject}&body=${body}`;
+      } else { // sms
+        const numbers = patrons.map(p => p.telephone).join(',');
+        const body = encodeURIComponent(values.message);
+        url = `sms:${numbers}?&body=${body}`;
+      }
+      
+      window.location.href = url;
+      toast({
+        title: 'Opening Client...',
+        description: `Your default ${type} application should open shortly.`,
+      });
+    }
 
     setIsOpen(false);
     form.reset();
@@ -83,7 +110,7 @@ export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild disabled={isSendDisabled}>
+      <DialogTrigger asChild disabled={recipientCount === 0}>
         {triggerButton}
       </DialogTrigger>
       <DialogContent>
@@ -94,6 +121,7 @@ export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) 
           </DialogTitle>
           <DialogDescription>
             Compose a message to send to all {recipientCount} eligible patrons.
+            {useCloudFunction && ' This will be sent from the server.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -130,9 +158,10 @@ export function BlastDialog({ patrons, type, triggerButton }: BlastDialogProps) 
               <DialogClose asChild>
                 <Button type="button" variant="secondary">Cancel</Button>
               </DialogClose>
-              <Button type="submit">
+              <Button type="submit" disabled={isSendDisabled}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Send className="mr-2" />
-                Send
+                {form.formState.isSubmitting ? 'Sending...' : 'Send'}
               </Button>
             </DialogFooter>
           </form>
