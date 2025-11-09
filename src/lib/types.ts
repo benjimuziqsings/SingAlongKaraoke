@@ -1,5 +1,11 @@
 
 
+export type Patron = {
+  id: string;
+  displayName: string;
+  email: string | null;
+  telephone?: string;
+}
 
 export type RequesterInfo = {
   singer: string;
