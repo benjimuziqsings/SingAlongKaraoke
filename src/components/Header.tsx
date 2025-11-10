@@ -66,7 +66,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
               )
             )}
 
-            {isAdmin && <QRCodeDialog />}
+            {isAdmin && isKJ && <QRCodeDialog />}
         </nav>
       </div>
     </header>
