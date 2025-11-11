@@ -39,9 +39,6 @@ const nextConfig = {
   experimental: {
     // Deprecated: allowedDevOrigins is now a top-level property
   },
-  allowedDevOrigins: [
-      'https://*.cloudworkstations.dev',
-  ]
 };
 
 module.exports = nextConfig;
