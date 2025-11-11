@@ -15,6 +15,31 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
     }
   };
 
+  const renderAdminButtons = () => {
+    if (!isKJ) return null;
+
+    return (
+      <>
+        {isAdmin ? (
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/home">
+              <Users className="mr-2 h-4 w-4" />
+              Patron View
+            </Link>
+          </Button>
+        ) : (
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/admin">
+              <UserCog className="mr-2 h-4 w-4" />
+              KJ View
+            </Link>
+          </Button>
+        )}
+        {isAdmin && <QRCodeDialog />}
+      </>
+    );
+  };
+
   return (
     <header className="py-3 px-4 md:px-6 border-b border-border/50 sticky top-0 bg-background/80 backdrop-blur-sm z-20">
       <div className="container mx-auto flex justify-between items-center">
@@ -33,7 +58,7 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                 Reviews
               </Link>
             </Button>
-            {user && (
+            {user ? (
               <>
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/profile">
@@ -46,27 +71,10 @@ export function Header({ isAdmin = false }: { isAdmin?: boolean }) {
                   Logout
                 </Button>
               </>
-            )}
+            ) : null}
             
-            {isKJ && (
-              isAdmin ? (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/home">
-                    <Users className="mr-2 h-4 w-4" />
-                    Patron View
-                  </Link>
-                </Button>
-              ) : (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/admin">
-                    <UserCog className="mr-2 h-4 w-4" />
-                    KJ View
-                  </Link>
-                </Button>
-              )
-            )}
+            {renderAdminButtons()}
 
-            {isAdmin && isKJ && <QRCodeDialog />}
         </nav>
       </div>
     </header>
