@@ -1,0 +1,15 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+# Specifies the build and run commands for the Next.js application.
+# The root directory is set to '.', indicating the project root.
+source: .
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 10
+
+# Pin the preview URL to the latest revision of the main branch.
+# This makes it easy to share a stable link with others for testing.
+pinTags:
+  - main

@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper functions to check authentication status and ownership.
     function isSignedIn() {
       return request.auth != null;
     }
