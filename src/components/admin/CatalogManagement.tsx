@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
@@ -206,6 +206,64 @@ export function CatalogManagement() {
     });
   };
 
+  const handleExportToCSV = () => {
+    if (!artists || artists.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to Export',
+        description: 'The catalog is currently empty.',
+      });
+      return;
+    }
+
+    const headers = ['Artist', 'Song', 'Lyrics'];
+    
+    const escapeCsvField = (field: string | undefined | null): string => {
+      if (field === null || field === undefined) {
+        return '""';
+      }
+      const stringField = String(field);
+      // If the field contains a comma, newline, or double quote, wrap it in double quotes.
+      if (stringField.includes(',') || stringField.includes('\n') || stringField.includes('"')) {
+        // Escape existing double quotes by doubling them
+        const escapedField = stringField.replace(/"/g, '""');
+        return `"${escapedField}"`;
+      }
+      return stringField;
+    };
+
+    const csvRows = [headers.join(',')];
+
+    for (const artist of artists) {
+      if (artist.songs) {
+        for (const song of artist.songs) {
+          const row = [
+            escapeCsvField(artist.name),
+            escapeCsvField(song.title),
+            escapeCsvField(song.lyrics),
+          ];
+          csvRows.push(row.join(','));
+        }
+      }
+    }
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'catalog.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: 'Export Complete',
+      description: 'The song catalog has been downloaded as catalog.csv.'
+    });
+  };
+
 
   const openSongDialog = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -251,36 +309,41 @@ export function CatalogManagement() {
           <BookText />
           Manage Catalog
         </CardTitle>
-        <Dialog open={isArtistDialogOpen} onOpenChange={setIsArtistDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2" /> Add Artist
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Artist</DialogTitle>
-            </DialogHeader>
-            <Form {...artistForm}>
-              <form onSubmit={artistForm.handleSubmit(handleAddArtist)} className="space-y-4">
-                <FormField control={artistForm.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Artist Name</FormLabel>
-                    <FormControl><Input placeholder="e.g., The Rockers" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <DialogFooter>
-                  <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isPending ? "Adding..." : "Add Artist"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={handleExportToCSV} disabled={artists.length === 0}>
+             <Download className="mr-2 h-4 w-4" /> Export to CSV
+           </Button>
+          <Dialog open={isArtistDialogOpen} onOpenChange={setIsArtistDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2" /> Add Artist
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Artist</DialogTitle>
+              </DialogHeader>
+              <Form {...artistForm}>
+                <form onSubmit={artistForm.handleSubmit(handleAddArtist)} className="space-y-4">
+                  <FormField control={artistForm.control} name="name" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Artist Name</FormLabel>
+                      <FormControl><Input placeholder="e.g., The Rockers" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                    <Button type="submit" disabled={isPending}>
+                      {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isPending ? "Adding..." : "Add Artist"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
@@ -464,5 +527,7 @@ export function CatalogManagement() {
     </Card>
   );
 }
+
+    
 
     
