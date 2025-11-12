@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, onSnapshot, getDocs, query } from 'firebase/firestore';
 import type { Artist, CatalogSong } from '@/lib/karaoke-catalog';
@@ -10,6 +10,7 @@ export interface UseCatalogResult {
   artists: Artist[];
   isLoading: boolean;
   error: Error | null;
+  refetch?: () => void; // Optional refetch function
 }
 
 const EMPTY_SONGS: CatalogSong[] = [];
@@ -25,17 +26,10 @@ export function useCatalog(): UseCatalogResult {
     return query(collection(firestore, 'artists'));
   }, [firestore]);
 
-  useEffect(() => {
-    if (!artistsQuery) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    
-    const unsubscribe = onSnapshot(artistsQuery, async (snapshot) => {
-      try {
-        const artistsDataPromises = snapshot.docs.map(async (artistDoc) => {
+  const fetchCatalogData = useCallback(async (query: any) => {
+    try {
+        const artistsSnapshot = await getDocs(query);
+        const artistsDataPromises = artistsSnapshot.docs.map(async (artistDoc) => {
           const songsCollectionRef = collection(artistDoc.ref, 'songs');
           const songsSnapshot = await getDocs(songsCollectionRef);
           
@@ -57,7 +51,6 @@ export function useCatalog(): UseCatalogResult {
         newArtistsData.sort((a, b) => a.name.localeCompare(b.name));
         
         setArtists(currentArtists => {
-          // A simple JSON.stringify check to prevent re-renders if the data is identical.
           if (JSON.stringify(currentArtists) === JSON.stringify(newArtistsData)) {
             return currentArtists;
           }
@@ -71,6 +64,27 @@ export function useCatalog(): UseCatalogResult {
       } finally {
         setIsLoading(false);
       }
+  }, []);
+
+  const refetch = useCallback(() => {
+    if(artistsQuery) {
+        setIsLoading(true);
+        fetchCatalogData(artistsQuery);
+    }
+  }, [artistsQuery, fetchCatalogData]);
+
+  useEffect(() => {
+    if (!artistsQuery) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    
+    const unsubscribe = onSnapshot(artistsQuery, async (snapshot) => {
+        // When snapshot updates, just refetch all data.
+        // This is simpler than trying to merge snapshot changes with subcollection data.
+        fetchCatalogData(artistsQuery);
     }, (err) => {
       console.error("Error fetching artists collection:", err);
       setError(err);
@@ -78,7 +92,7 @@ export function useCatalog(): UseCatalogResult {
     });
 
     return () => unsubscribe();
-  }, [artistsQuery]);
+  }, [artistsQuery, fetchCatalogData]);
 
-  return { artists, isLoading, error };
+  return { artists, isLoading, error, refetch };
 }

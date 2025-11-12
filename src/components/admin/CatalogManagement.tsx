@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,13 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 
@@ -46,7 +46,7 @@ const addToQueueSchema = z.object({
 
 
 export function CatalogManagement() {
-  const { artists, isLoading } = useCatalog();
+  const { artists, isLoading, refetch: refetchCatalog } = useCatalog();
   const { user } = useUser();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -57,6 +57,9 @@ export function CatalogManagement() {
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [selectedSong, setSelectedSong] = useState<CatalogSong | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isImporting, startImportTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
     resolver: zodResolver(artistSchema),
@@ -235,7 +238,7 @@ export function CatalogManagement() {
     const csvRows = [headers.join(',')];
 
     for (const artist of artists) {
-      if (artist.songs) {
+      if (artist.songs && artist.songs.length > 0) {
         for (const song of artist.songs) {
           const row = [
             escapeCsvField(artist.name),
@@ -244,6 +247,9 @@ export function CatalogManagement() {
           ];
           csvRows.push(row.join(','));
         }
+      } else {
+         const row = [escapeCsvField(artist.name), '',''];
+         csvRows.push(row.join(','));
       }
     }
 
@@ -262,6 +268,91 @@ export function CatalogManagement() {
       title: 'Export Complete',
       description: 'The song catalog has been downloaded as catalog.csv.'
     });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const parseCSV = (content: string): { Artist: string, Song: string, Lyrics: string }[] => {
+    const lines = content.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        // This is a simple parser and may not handle all CSV edge cases.
+        const values = line.split(',');
+        const entry: any = {};
+        for(let j=0; j < headers.length; j++){
+            entry[headers[j]] = values[j]?.replace(/"/g, '').trim();
+        }
+        data.push(entry);
+    }
+    return data;
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !firestore) return;
+
+    startImportTransition(async () => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target?.result as string;
+            try {
+                const parsedData = parseCSV(content);
+
+                const groupedByArtist: { [key: string]: { title: string, lyrics: string }[] } = {};
+                for (const row of parsedData) {
+                    const artistName = row.Artist;
+                    if (!artistName) continue;
+                    if (!groupedByArtist[artistName]) {
+                        groupedByArtist[artistName] = [];
+                    }
+                    if (row.Song) {
+                        groupedByArtist[artistName].push({ title: row.Song, lyrics: row.Lyrics || '' });
+                    }
+                }
+                
+                const artistsCollectionRef = collection(firestore, 'artists');
+                const batch = writeBatch(firestore);
+
+                for (const artistName in groupedByArtist) {
+                    // Check if artist already exists
+                    let artist = artists.find(a => a.name.toLowerCase() === artistName.toLowerCase());
+                    let artistRef;
+
+                    if (!artist) {
+                        // Artist doesn't exist, create them
+                        artistRef = doc(artistsCollectionRef);
+                        batch.set(artistRef, { name: artistName, isAvailable: true });
+                    } else {
+                        artistRef = doc(artistsCollectionRef, artist.id);
+                    }
+                    
+                    const songsToAdd = groupedByArtist[artistName];
+                    for (const song of songsToAdd) {
+                        const songRef = doc(collection(artistRef, 'songs'));
+                        batch.set(songRef, { title: song.title, lyrics: song.lyrics, isAvailable: true });
+                    }
+                }
+                
+                await batch.commit();
+
+                toast({ title: 'Import Successful', description: 'Catalog has been updated from the CSV file.' });
+                if(refetchCatalog) refetchCatalog();
+
+            } catch (error: any) {
+                console.error("Error during CSV import:", error);
+                toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse or import the CSV file.' });
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // Reset file input
+    event.target.value = '';
   };
 
 
@@ -310,6 +401,11 @@ export function CatalogManagement() {
           Manage Catalog
         </CardTitle>
         <div className="flex items-center gap-2">
+           <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+           <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />} 
+             {isImporting ? 'Importing...' : 'Import from CSV'}
+           </Button>
            <Button variant="outline" onClick={handleExportToCSV} disabled={artists.length === 0}>
              <Download className="mr-2 h-4 w-4" /> Export to CSV
            </Button>
@@ -527,7 +623,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
-    
-
-    
