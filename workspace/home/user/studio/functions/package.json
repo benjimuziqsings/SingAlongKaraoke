@@ -1,0 +1,11 @@
+{
+  "name": "functions-redirect",
+  "version": "1.0.0",
+  "description": "Redirects the build process to the parent directory.",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build --prefix .."
+  },
+  "author": "",
+  "license": "ISC"
+}
