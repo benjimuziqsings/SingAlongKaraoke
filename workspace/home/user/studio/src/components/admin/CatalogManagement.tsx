@@ -109,7 +109,7 @@ export function CatalogManagement() {
     });
   };
 
- const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
+  const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
     if (!storage || !selectedArtist) {
         toast({ variant: 'destructive', title: 'Error', description: 'Required information is missing.' });
         return;
@@ -419,7 +419,7 @@ export function CatalogManagement() {
     editArtistForm.reset({
       id: artist.id!,
       name: artist.name,
-      imageFile: undefined, // important to reset to undefined, not null
+      imageFile: undefined,
     });
     setIsEditArtistDialogOpen(true);
   };
@@ -627,7 +627,7 @@ export function CatalogManagement() {
                             <FormControl className="flex-grow">
                                 <Input 
                                     type="file" 
-                                    accept="image/png, image/jpeg, image/gif"
+                                    accept="image/jpeg,image/png,image/gif,image/tiff,image/aif,image/heic,application/pdf"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         onChange(file || null);
@@ -752,4 +752,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
