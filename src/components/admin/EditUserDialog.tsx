@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -60,7 +61,7 @@ export function EditUserDialog({ patron, isOpen, setIsOpen }: EditUserDialogProp
             telephone: patron.telephone || '',
         })
     }
-  }, [patron, form])
+  }, [patron, form, isOpen])
 
   async function onSubmit(values: z.infer<typeof editUserSchema>) {
     if (!firestore) {
