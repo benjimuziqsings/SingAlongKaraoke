@@ -18,12 +18,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, useStorage } from '@/firebase';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { uploadArtistImage } from '@/lib/storage-service';
-import { useStorage } from '@/firebase';
 
 
 const artistSchema = z.object({
@@ -99,7 +98,7 @@ export function CatalogManagement() {
   const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
     startTransition(() => {
       const artistsCol = collection(firestore, 'artists');
-      addDocumentNonBlocking(artistsCol, {
+      addDocumentNonBlocking(firestore, artistsCol, {
         name: values.name,
         imageUrl: '',
         isAvailable: true,
@@ -111,28 +110,30 @@ export function CatalogManagement() {
   };
 
   const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
-    if (!storage) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
+    if (!storage || !firestore || !selectedArtist) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
         return;
     }
 
     startTransition(async () => {
       try {
-        let imageUrl = selectedArtist?.imageUrl || '';
-        
-        if (imageFileToUpdate) {
+        let finalImageUrl = selectedArtist.imageUrl || '';
+
+        if (imageFileToUpdate) { // A new file was selected for upload
             toast({ title: 'Uploading Image...', description: 'Please wait.' });
-            imageUrl = await uploadArtistImage(storage, values.id, imageFileToUpdate);
-        } 
-        else if (imageFileToUpdate === null) {
-            imageUrl = '';
+            finalImageUrl = await uploadArtistImage(storage, values.id, imageFileToUpdate);
+        } else if (imageFileToUpdate === null) { // The image was explicitly removed
+            finalImageUrl = '';
         }
+        // If imageFileToUpdate is undefined, do nothing to the URL, keeping the original.
 
         const artistRef = doc(firestore, 'artists', values.id);
-        updateDocumentNonBlocking(artistRef, {
+        const dataToUpdate = {
             name: values.name,
-            imageUrl: imageUrl,
-        });
+            imageUrl: finalImageUrl,
+        };
+        
+        updateDocumentNonBlocking(firestore, artistRef, dataToUpdate);
 
         toast({ title: 'Success', description: `"${values.name}" has been updated.` });
         setIsEditArtistDialogOpen(false);
@@ -149,7 +150,7 @@ export function CatalogManagement() {
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
     startTransition(() => {
       const songsCol = collection(firestore, 'artists', values.artistId, 'songs');
-      addDocumentNonBlocking(songsCol, {
+      addDocumentNonBlocking(firestore, songsCol, {
         title: values.title,
         isAvailable: true,
         lyrics: '',
@@ -163,7 +164,7 @@ export function CatalogManagement() {
   const handleUpdateLyrics = async (values: z.infer<typeof lyricsSchema>) => {
     startTransition(() => {
       const songRef = doc(firestore, 'artists', values.artistId, 'songs', values.songId);
-      updateDocumentNonBlocking(songRef, { lyrics: values.lyrics });
+      updateDocumentNonBlocking(firestore, songRef, { lyrics: values.lyrics });
       toast({ title: 'Success', description: `Lyrics for "${values.title}" updated.` });
       lyricsForm.reset();
       setIsLyricsDialogOpen(false);
@@ -213,7 +214,7 @@ export function CatalogManagement() {
   const handleRemoveSong = (artistId: string, songId: string, songTitle: string) => {
     startTransition(() => {
       const songRef = doc(firestore, 'artists', artistId, 'songs', songId);
-      deleteDocumentNonBlocking(songRef);
+      deleteDocumentNonBlocking(firestore, songRef);
       toast({ title: 'Success', description: `"${songTitle}" has been removed.` });
     });
   };
@@ -222,7 +223,7 @@ export function CatalogManagement() {
     startTransition(() => {
       if (!artist.id) return;
       const artistRef = doc(firestore, 'artists', artist.id);
-      updateDocumentNonBlocking(artistRef, { isAvailable: !artist.isAvailable });
+      updateDocumentNonBlocking(firestore, artistRef, { isAvailable: !artist.isAvailable });
       toast({ title: 'Success', description: `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
@@ -231,7 +232,7 @@ export function CatalogManagement() {
     startTransition(() => {
       if (!artist.id || !song.id) return;
       const songRef = doc(firestore, 'artists', artist.id, 'songs', song.id);
-      updateDocumentNonBlocking(songRef, { isAvailable: !song.isAvailable });
+      updateDocumentNonBlocking(firestore, songRef, { isAvailable: !song.isAvailable });
       toast({ title: 'Success', description: `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
@@ -249,7 +250,7 @@ export function CatalogManagement() {
         patronId: user.uid,
       };
       const requestsCol = collection(firestore, 'song_requests');
-      addDocumentNonBlocking(requestsCol, songData);
+      addDocumentNonBlocking(firestore, requestsCol, songData);
       toast({
         title: 'Song Added!',
         description: `"${selectedSong.title}" for ${values.singer} is in the queue.`
@@ -740,5 +741,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
-    

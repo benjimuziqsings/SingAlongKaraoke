@@ -82,7 +82,7 @@ export function ReviewDialog() {
     };
 
     const reviewsCol = collection(firestore, 'reviews');
-    addDocumentNonBlocking(reviewsCol, reviewData);
+    addDocumentNonBlocking(firestore, reviewsCol, reviewData);
     
     toast({
       title: 'Review Submitted!',

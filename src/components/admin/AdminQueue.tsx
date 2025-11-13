@@ -100,7 +100,7 @@ export function AdminQueue() {
       song.requesters.forEach(requester => {
         if (!requester.originalId) return;
         const songRef = doc(firestore, 'song_requests', requester.originalId);
-        updateDocumentNonBlocking(songRef, { status: newStatus });
+        updateDocumentNonBlocking(firestore, songRef, { status: newStatus });
       });
 
       let toastTitle = 'Song Updated';

@@ -166,10 +166,10 @@ export default function ProfilePage() {
 
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
-    if (!user || !patronDocRef) return;
+    if (!user || !patronDocRef || !firestore) return;
     const dataToUpdate = { telephone: values.telephone };
     
-    updateDocumentNonBlocking(patronDocRef, dataToUpdate);
+    updateDocumentNonBlocking(firestore, patronDocRef, dataToUpdate);
     toast({ title: 'Profile Updated!', description: 'Your information has been saved.' });
   }
 

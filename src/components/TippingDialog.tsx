@@ -71,7 +71,7 @@ export function TippingDialog() {
     };
 
     const tipsCol = collection(firestore, 'tips');
-    addDocumentNonBlocking(tipsCol, tipData);
+    addDocumentNonBlocking(firestore, tipsCol, tipData);
 
     toast({
       title: 'Thank You!',

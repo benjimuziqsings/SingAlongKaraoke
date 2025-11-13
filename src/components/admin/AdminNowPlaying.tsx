@@ -24,7 +24,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
 import { LyricsDialog } from '../LyricsDialog';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 
 
 export function AdminNowPlaying() {
@@ -34,12 +34,12 @@ export function AdminNowPlaying() {
   const { nowPlaying, isLoading } = useQueue();
 
   const handleFinishSong = () => {
-    if (!nowPlaying) return;
+    if (!nowPlaying || !firestore) return;
     startTransition(() => {
       nowPlaying.requesters.forEach(requester => {
         if (!requester.originalId) return;
         const songRef = doc(firestore, 'song_requests', requester.originalId);
-        updateDocumentNonBlocking(songRef, { status: 'finished' });
+        updateDocumentNonBlocking(firestore, songRef, { status: 'finished' });
       });
       
       toast({
