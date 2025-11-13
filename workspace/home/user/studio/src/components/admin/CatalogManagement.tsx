@@ -68,7 +68,6 @@ export function CatalogManagement() {
   const [isPending, startTransition] = useTransition();
   const [isImporting, startImportTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editArtistImageRef = useRef<HTMLInputElement>(null);
 
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
@@ -78,7 +77,7 @@ export function CatalogManagement() {
 
   const editArtistForm = useForm<z.infer<typeof editArtistSchema>>({
     resolver: zodResolver(editArtistSchema),
-    defaultValues: { id: '', name: '', imageFile: null },
+    defaultValues: { id: '', name: '', imageFile: undefined },
   });
 
   const songForm = useForm<z.infer<typeof songSchema>>({
@@ -110,23 +109,25 @@ export function CatalogManagement() {
     });
   };
 
-  const handleEditArtist = (artistToEdit: Artist) => (values: z.infer<typeof editArtistSchema>) => {
-    if (!storage) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
+ const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
+    if (!storage || !selectedArtist) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Required information is missing.' });
         return;
     }
     startTransition(async () => {
       try {
-        let imageUrl = artistToEdit.imageUrl || '';
+        let imageUrl = selectedArtist.imageUrl || '';
         
-        // Check if a new file is uploaded
+        // A new file is uploaded, process it.
         if (values.imageFile) {
             toast({ title: 'Uploading Image...', description: 'Please wait.' });
             imageUrl = await uploadArtistImage(storage, values.id, values.imageFile);
-        } else if (values.imageFile === null) {
-            // Check if the file was explicitly removed (set to null)
+        } 
+        // A file was explicitly removed (set to null), so clear the URL.
+        else if (values.imageFile === null) {
             imageUrl = '';
         }
+        // Otherwise, the image field was not touched, and imageUrl remains the same.
 
         const artistRef = doc(firestore, 'artists', values.id);
         updateDocumentNonBlocking(artistRef, {
@@ -143,6 +144,7 @@ export function CatalogManagement() {
       }
     });
   };
+
 
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
     startTransition(() => {
@@ -417,7 +419,7 @@ export function CatalogManagement() {
     editArtistForm.reset({
       id: artist.id!,
       name: artist.name,
-      imageFile: undefined,
+      imageFile: undefined, // important to reset to undefined, not null
     });
     setIsEditArtistDialogOpen(true);
   };
@@ -610,7 +612,7 @@ export function CatalogManagement() {
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Artist</DialogTitle></DialogHeader>
             <Form {...editArtistForm}>
-              <form onSubmit={editArtistForm.handleSubmit(handleEditArtist(selectedArtist!))} className="space-y-4">
+              <form onSubmit={editArtistForm.handleSubmit(handleEditArtistSubmit)} className="space-y-4">
                 <FormField control={editArtistForm.control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Artist Name</FormLabel>
@@ -635,11 +637,12 @@ export function CatalogManagement() {
                             </FormControl>
                             <Button
                                 type="button"
-                                variant="outline"
+                                variant="ghost"
                                 size="icon"
+                                className="text-muted-foreground hover:text-destructive"
                                 onClick={() => {
                                     onChange(null); // Explicitly set to null to indicate removal
-                                    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+                                    const input = document.querySelector(`input[name="${rest.name}"]`) as HTMLInputElement;
                                     if(input) input.value = '';
                                 }}
                             >
@@ -749,3 +752,4 @@ export function CatalogManagement() {
     </Card>
   );
 }
+
