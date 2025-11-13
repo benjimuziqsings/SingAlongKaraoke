@@ -111,7 +111,7 @@ export function CatalogManagement() {
 
   const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
     if (!storage || !firestore || !selectedArtist) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Required services are not available.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Required services or data are not available.' });
         return;
     }
 
