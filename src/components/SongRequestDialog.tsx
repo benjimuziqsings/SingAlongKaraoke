@@ -135,7 +135,7 @@ export function SongRequestDialog() {
     }
 
     const requestsCol = collection(firestore, 'song_requests');
-    addDocumentNonBlocking(requestsCol, songData);
+    addDocumentNonBlocking(firestore, requestsCol, songData);
 
     toast({
         title: 'Request Sent!',

@@ -70,7 +70,7 @@ export function EditUserDialog({ patron, isOpen, setIsOpen }: EditUserDialogProp
     }
 
     const patronRef = doc(firestore, 'patrons', patron.id);
-    updateDocumentNonBlocking(patronRef, values);
+    updateDocumentNonBlocking(firestore, patronRef, values);
 
     toast({
       title: 'Patron Updated',
