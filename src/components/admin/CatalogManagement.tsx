@@ -13,13 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download, Upload, Image as ImageIcon } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download, Upload, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, addDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { uploadArtistImage } from '@/lib/storage-service';
@@ -30,9 +30,11 @@ const artistSchema = z.object({
   name: z.string().min(1, 'Artist name is required'),
 });
 
-const editArtistSchema = artistSchema.extend({
+const editArtistSchema = z.object({
   id: z.string(),
-  imageFile: z.instanceof(File).optional(),
+  name: z.string().min(1, 'Artist name is required'),
+  currentImageUrl: z.string().optional(),
+  imageFile: z.instanceof(File).optional().nullable(),
 });
 
 const songSchema = z.object({
@@ -68,7 +70,6 @@ export function CatalogManagement() {
   const [isPending, startTransition] = useTransition();
   const [isImporting, startImportTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editArtistImageRef = useRef<HTMLInputElement>(null);
 
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
@@ -78,7 +79,7 @@ export function CatalogManagement() {
 
   const editArtistForm = useForm<z.infer<typeof editArtistSchema>>({
     resolver: zodResolver(editArtistSchema),
-    defaultValues: { id: '', name: '' },
+    defaultValues: { id: '', name: '', imageFile: undefined, currentImageUrl: '' },
   });
 
   const songForm = useForm<z.infer<typeof songSchema>>({
@@ -110,17 +111,20 @@ export function CatalogManagement() {
     });
   };
 
-  const handleEditArtist = async (values: z.infer<typeof editArtistSchema>) => {
+  const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
     if (!storage) {
         toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
         return;
     }
     startTransition(async () => {
       try {
-        let imageUrl = selectedArtist?.imageUrl || '';
+        let imageUrl = values.currentImageUrl || '';
+        
         if (values.imageFile) {
             toast({ title: 'Uploading Image...', description: 'Please wait.' });
             imageUrl = await uploadArtistImage(storage, values.id, values.imageFile);
+        } else if (values.imageFile === null) {
+            imageUrl = '';
         }
 
         const artistRef = doc(firestore, 'artists', values.id);
@@ -138,6 +142,7 @@ export function CatalogManagement() {
       }
     });
   };
+
 
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
     startTransition(() => {
@@ -190,10 +195,8 @@ export function CatalogManagement() {
         toast({ title: 'Success', description: `"${artistName}" and all associated songs have been removed.` });
       } catch (error) {
         if (error instanceof FirestorePermissionError) {
-            // This error was already emitted, just prevent the success toast.
             console.error("Permission error during artist removal:", error.message);
         } else {
-            // This is likely a permission error on the batch.commit() itself.
             const permissionError = new FirestorePermissionError({
               path: `artists/${artistId} and subcollections`,
               operation: 'delete',
@@ -241,7 +244,7 @@ export function CatalogManagement() {
         specialAnnouncement: '',
         requestTime: Date.now(),
         status: 'queued' as 'queued',
-        patronId: user.uid, // KJ is the patron in this case
+        patronId: user.uid,
       };
       const requestsCol = collection(firestore, 'song_requests');
       addDocumentNonBlocking(requestsCol, songData);
@@ -271,9 +274,7 @@ export function CatalogManagement() {
         return '""';
       }
       const stringField = String(field);
-      // If the field contains a comma, newline, or double quote, wrap it in double quotes.
       if (stringField.includes(',') || stringField.includes('\n') || stringField.includes('"')) {
-        // Escape existing double quotes by doubling them
         const escapedField = stringField.replace(/"/g, '""');
         return `"${escapedField}"`;
       }
@@ -326,7 +327,6 @@ export function CatalogManagement() {
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
-        // This is a simple parser and may not handle all CSV edge cases.
         const values = line.split(',');
         const entry: any = {};
         for(let j=0; j < headers.length; j++){
@@ -364,12 +364,10 @@ export function CatalogManagement() {
                 const batch = writeBatch(firestore);
 
                 for (const artistName in groupedByArtist) {
-                    // Check if artist already exists
                     let artist = artists.find(a => a.name.toLowerCase() === artistName.toLowerCase());
                     let artistRef;
 
                     if (!artist) {
-                        // Artist doesn't exist, create them
                         artistRef = doc(artistsCollectionRef);
                         batch.set(artistRef, { name: artistName, isAvailable: true });
                     } else {
@@ -396,7 +394,6 @@ export function CatalogManagement() {
         reader.readAsText(file);
     });
 
-    // Reset file input
     event.target.value = '';
   };
 
@@ -409,9 +406,12 @@ export function CatalogManagement() {
 
   const openEditArtistDialog = (artist: Artist) => {
     setSelectedArtist(artist);
-    editArtistForm.setValue('id', artist.id!);
-    editArtistForm.setValue('name', artist.name);
-    editArtistForm.setValue('imageFile', undefined);
+    editArtistForm.reset({
+      id: artist.id!,
+      name: artist.name,
+      currentImageUrl: artist.imageUrl || '',
+      imageFile: undefined, 
+    });
     setIsEditArtistDialogOpen(true);
   };
   
@@ -603,7 +603,7 @@ export function CatalogManagement() {
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Artist</DialogTitle></DialogHeader>
             <Form {...editArtistForm}>
-              <form onSubmit={editArtistForm.handleSubmit(handleEditArtist)} className="space-y-4">
+              <form onSubmit={editArtistForm.handleSubmit(handleEditArtistSubmit)} className="space-y-4">
                 <FormField control={editArtistForm.control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Artist Name</FormLabel>
@@ -611,24 +611,47 @@ export function CatalogManagement() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={editArtistForm.control} name="imageFile" render={({ field: { onChange, value, ...rest }}) => (
+                <FormField control={editArtistForm.control} name="imageFile" render={({ field: { onChange, value, ...rest }}) => {
+                  const currentImageUrl = editArtistForm.getValues("currentImageUrl");
+                  return (
                     <FormItem>
                         <FormLabel>Artist Image</FormLabel>
-                        <FormControl>
-                            <Input 
-                                type="file" 
-                                accept="image/png, image/jpeg, image/gif"
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files.length > 0) {
-                                        onChange(e.target.files[0]);
-                                    }
+                        <div className="flex items-center gap-2">
+                            <FormControl className="flex-grow">
+                                <Input 
+                                    type="file" 
+                                    accept="image/jpeg,image/png,image/gif,image/tiff,image/aif,image/heic,application/pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        onChange(file || null);
+                                    }}
+                                    {...rest}
+                                />
+                            </FormControl>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                    onChange(null); // Set to null to indicate removal
+                                    const input = document.querySelector(`input[name="${rest.name}"]`) as HTMLInputElement;
+                                    if(input) input.value = '';
                                 }}
-                                {...rest}
-                            />
-                        </FormControl>
+                            >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Remove image</span>
+                            </Button>
+                        </div>
+                        {currentImageUrl && value === undefined && (
+                          <div className="text-sm text-muted-foreground mt-2">
+                              Current image: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">View</a>
+                          </div>
+                        )}
                         <FormMessage />
                     </FormItem>
-                )} />
+                  )
+                }} />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                   <Button type="submit" disabled={isPending}>
@@ -723,3 +746,5 @@ export function CatalogManagement() {
     </Card>
   );
 }
+
+    
