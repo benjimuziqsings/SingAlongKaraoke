@@ -33,8 +33,6 @@ const artistSchema = z.object({
 const editArtistSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Artist name is required'),
-  currentImageUrl: z.string().optional(),
-  imageFile: z.instanceof(File).optional().nullable(),
 });
 
 const songSchema = z.object({
@@ -70,6 +68,7 @@ export function CatalogManagement() {
   const [isPending, startTransition] = useTransition();
   const [isImporting, startImportTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFileToUpdate, setImageFileToUpdate] = useState<File | null | undefined>(undefined);
 
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
@@ -79,7 +78,7 @@ export function CatalogManagement() {
 
   const editArtistForm = useForm<z.infer<typeof editArtistSchema>>({
     resolver: zodResolver(editArtistSchema),
-    defaultValues: { id: '', name: '', imageFile: undefined, currentImageUrl: '' },
+    defaultValues: { id: '', name: '' },
   });
 
   const songForm = useForm<z.infer<typeof songSchema>>({
@@ -112,20 +111,25 @@ export function CatalogManagement() {
   };
 
   const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
-    if (!storage) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
+    if (!storage || !selectedArtist) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update artist information.' });
         return;
     }
+
     startTransition(async () => {
       try {
-        let imageUrl = values.currentImageUrl || '';
+        let imageUrl = selectedArtist.imageUrl || '';
         
-        if (values.imageFile) {
+        // A new file was selected for upload
+        if (imageFileToUpdate) {
             toast({ title: 'Uploading Image...', description: 'Please wait.' });
-            imageUrl = await uploadArtistImage(storage, values.id, values.imageFile);
-        } else if (values.imageFile === null) {
+            imageUrl = await uploadArtistImage(storage, values.id, imageFileToUpdate);
+        } 
+        // A file was explicitly marked for removal
+        else if (imageFileToUpdate === null) {
             imageUrl = '';
         }
+        // Otherwise, imageFileToUpdate is undefined, so we keep the existing imageUrl
 
         const artistRef = doc(firestore, 'artists', values.id);
         updateDocumentNonBlocking(artistRef, {
@@ -134,8 +138,9 @@ export function CatalogManagement() {
         });
 
         toast({ title: 'Success', description: `"${values.name}" has been updated.` });
-        editArtistForm.reset();
         setIsEditArtistDialogOpen(false);
+        setImageFileToUpdate(undefined);
+
       } catch (error) {
         console.error('Failed to update artist:', error);
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update artist information.' });
@@ -406,11 +411,10 @@ export function CatalogManagement() {
 
   const openEditArtistDialog = (artist: Artist) => {
     setSelectedArtist(artist);
+    setImageFileToUpdate(undefined); // Reset image state
     editArtistForm.reset({
       id: artist.id!,
       name: artist.name,
-      currentImageUrl: artist.imageUrl || '',
-      imageFile: undefined, 
     });
     setIsEditArtistDialogOpen(true);
   };
@@ -611,47 +615,40 @@ export function CatalogManagement() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={editArtistForm.control} name="imageFile" render={({ field: { onChange, value, ...rest }}) => {
-                  const currentImageUrl = editArtistForm.getValues("currentImageUrl");
-                  return (
-                    <FormItem>
-                        <FormLabel>Artist Image</FormLabel>
-                        <div className="flex items-center gap-2">
-                            <FormControl className="flex-grow">
-                                <Input 
-                                    type="file" 
-                                    accept="image/jpeg,image/png,image/gif,image/tiff,image/aif,image/heic,application/pdf"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        onChange(file || null);
-                                    }}
-                                    {...rest}
-                                />
-                            </FormControl>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-destructive"
-                                onClick={() => {
-                                    onChange(null); // Set to null to indicate removal
-                                    const input = document.querySelector(`input[name="${rest.name}"]`) as HTMLInputElement;
-                                    if(input) input.value = '';
+                <FormItem>
+                    <FormLabel>Artist Image</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl className="flex-grow">
+                            <Input 
+                                type="file" 
+                                accept="image/jpeg,image/png,image/gif,image/tiff,image/aif,image/heic,application/pdf"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    setImageFileToUpdate(file || null);
                                 }}
-                            >
-                                <X className="h-4 w-4" />
-                                <span className="sr-only">Remove image</span>
-                            </Button>
+                            />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => {
+                                setImageFileToUpdate(null);
+                                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                                if (fileInput) fileInput.value = '';
+                            }}
+                        >
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Remove image</span>
+                        </Button>
+                    </div>
+                     {(selectedArtist?.imageUrl && imageFileToUpdate === undefined) && (
+                        <div className="text-sm text-muted-foreground mt-2">
+                            Current image: <a href={selectedArtist.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">View</a>
                         </div>
-                        {currentImageUrl && value === undefined && (
-                          <div className="text-sm text-muted-foreground mt-2">
-                              Current image: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">View</a>
-                          </div>
-                        )}
-                        <FormMessage />
-                    </FormItem>
-                  )
-                }} />
+                    )}
+                </FormItem>
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                   <Button type="submit" disabled={isPending}>
@@ -746,5 +743,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
-    
