@@ -2,10 +2,10 @@
 'use client';
 
 import { useMemoFirebase } from '@/firebase/provider';
-import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
-import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import { Song, GroupedSong, RequesterInfo } from '@/lib/types';
-import { useUser } from '@/firebase/provider';
+import { Artist } from '@/lib/karaoke-catalog';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
 // Define the structure for the hook's return value
@@ -27,6 +27,7 @@ export function useQueue(): UseQueueResult {
   const [songs, setSongs] = useState<Song[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [nowPlayingArtist, setNowPlayingArtist] = useState<Artist | null>(null);
 
   const songRequestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -46,7 +47,6 @@ export function useQueue(): UseQueueResult {
         setIsLoading(false);
     }
   }, [songRequestsQuery]);
-
 
   useEffect(() => {
     if (!songRequestsQuery) {
@@ -132,5 +132,42 @@ export function useQueue(): UseQueueResult {
     return { nowPlaying, upcoming, held, history };
   }, [songs]);
 
-  return { nowPlaying, upcoming, held, history, isLoading, error, refetch };
+  // Effect to fetch artist details for the now playing song
+  useEffect(() => {
+    if (!nowPlaying || !firestore) {
+      setNowPlayingArtist(null);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchArtist = async () => {
+      // Find artist by name. This is less efficient than by ID, but works with current structure.
+      const artistsRef = collection(firestore, 'artists');
+      const q = query(artistsRef, where("name", "==", nowPlaying.artist));
+      const querySnapshot = await getDocs(q);
+
+      if (isMounted) {
+        if (!querySnapshot.empty) {
+          const artistDoc = querySnapshot.docs[0];
+          setNowPlayingArtist({ id: artistDoc.id, ...artistDoc.data() } as Artist);
+        } else {
+          setNowPlayingArtist(null); // Artist not found in catalog
+        }
+      }
+    };
+
+    fetchArtist();
+    return () => { isMounted = false };
+  }, [nowPlaying, firestore]);
+
+  const nowPlayingWithArtistImage = useMemo(() => {
+    if (!nowPlaying) return null;
+    return {
+      ...nowPlaying,
+      artistImageUrl: nowPlayingArtist?.imageUrl || '',
+    };
+  }, [nowPlaying, nowPlayingArtist]);
+
+
+  return { nowPlaying: nowPlayingWithArtistImage, upcoming, held, history, isLoading, error, refetch };
 }

@@ -2,14 +2,12 @@
 'use client';
 import type { GroupedSong } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Mic2, Music, Users, MessageSquare } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Mic2, Music, Users } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from './ui/button';
 import { LyricsDialog } from './LyricsDialog';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 type NowPlayingProps = {
   song: GroupedSong | null;
@@ -29,39 +27,45 @@ export function NowPlaying({ song }: NowPlayingProps) {
         </CardHeader>
         <CardContent>
           {song ? (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-headline text-4xl md:text-5xl text-white break-words">{song.title}</h3>
-                <p className="text-xl text-muted-foreground flex items-center gap-2 mt-1">
-                  <Music className="h-5 w-5" />
-                  {song.artist}
-                </p>
+            <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <Avatar className="h-32 w-32 md:h-40 md:w-40 shadow-lg">
+                  <AvatarImage src={song.artistImageUrl} alt={song.artist} />
+                  <AvatarFallback>
+                    <Music className="h-16 w-16 text-muted-foreground" />
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-lg font-semibold text-muted-foreground">{song.artist}</p>
               </div>
-              <div className="flex items-center gap-4 flex-wrap">
-                 <Popover>
+
+              <div className="space-y-3 flex-grow">
+                <h3 className="font-headline text-4xl md:text-6xl text-white break-words">{song.title}</h3>
+                <div className="flex items-center justify-center md:justify-start gap-4 flex-wrap">
+                  <Popover>
                     <PopoverTrigger asChild>
-                       <Button variant="outline">
-                         <Users className="mr-2 h-4 w-4" />
-                         View Requesters ({song.requesters.length})
-                       </Button>
+                      <Button variant="outline">
+                        <Users className="mr-2 h-4 w-4" />
+                        View Requesters ({song.requesters.length})
+                      </Button>
                     </PopoverTrigger>
                     <PopoverContent>
-                       <h4 className="font-bold mb-2">Requested By</h4>
+                      <h4 className="font-bold mb-2">Requested By</h4>
                       <ul className="space-y-2 text-sm">
                         {song.requesters.map((requester, idx) => (
-                           <li key={idx} className="flex flex-col">
+                          <li key={idx} className="flex flex-col">
                             <span className="font-semibold">{requester.singer}</span>
                             {requester.announcement && (
-                                <p className="text-xs italic text-muted-foreground pl-2 border-l-2 border-accent ml-1 mt-1">
-                                  "{requester.announcement}"
-                                </p>
+                              <p className="text-xs italic text-muted-foreground pl-2 border-l-2 border-accent ml-1 mt-1">
+                                "{requester.announcement}"
+                              </p>
                             )}
-                           </li>
+                          </li>
                         ))}
                       </ul>
                     </PopoverContent>
                   </Popover>
-                <LyricsDialog song={song} />
+                  <LyricsDialog song={song} />
+                </div>
               </div>
             </div>
           ) : (

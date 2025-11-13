@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download, Upload } from 'lucide-react';
+import { PlusCircle, Music, BookText, Save, Edit, Trash2, Eye, EyeOff, Loader2, ListPlus, Download, Upload, Image as ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,11 @@ import { useCatalog } from '@/hooks/useCatalog';
 
 const artistSchema = z.object({
   name: z.string().min(1, 'Artist name is required'),
+  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+});
+
+const editArtistSchema = artistSchema.extend({
+  id: z.string(),
 });
 
 const songSchema = z.object({
@@ -51,6 +56,7 @@ export function CatalogManagement() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);
+  const [isEditArtistDialogOpen, setIsEditArtistDialogOpen] = useState(false);
   const [isSongDialogOpen, setIsSongDialogOpen] = useState(false);
   const [isLyricsDialogOpen, setIsLyricsDialogOpen] = useState(false);
   const [isAddToQueueDialogOpen, setIsAddToQueueDialogOpen] = useState(false);
@@ -63,7 +69,12 @@ export function CatalogManagement() {
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
     resolver: zodResolver(artistSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: '', imageUrl: '' },
+  });
+
+  const editArtistForm = useForm<z.infer<typeof editArtistSchema>>({
+    resolver: zodResolver(editArtistSchema),
+    defaultValues: { id: '', name: '', imageUrl: '' },
   });
 
   const songForm = useForm<z.infer<typeof songSchema>>({
@@ -86,11 +97,25 @@ export function CatalogManagement() {
       const artistsCol = collection(firestore, 'artists');
       addDocumentNonBlocking(artistsCol, {
         name: values.name,
+        imageUrl: values.imageUrl || '',
         isAvailable: true,
       });
       toast({ title: 'Success', description: `"${values.name}" has been added.` });
       artistForm.reset();
       setIsArtistDialogOpen(false);
+    });
+  };
+
+  const handleEditArtist = async (values: z.infer<typeof editArtistSchema>) => {
+    startTransition(() => {
+      const artistRef = doc(firestore, 'artists', values.id);
+      updateDocumentNonBlocking(artistRef, {
+        name: values.name,
+        imageUrl: values.imageUrl || '',
+      });
+      toast({ title: 'Success', description: `"${values.name}" has been updated.` });
+      editArtistForm.reset();
+      setIsEditArtistDialogOpen(false);
     });
   };
 
@@ -361,6 +386,13 @@ export function CatalogManagement() {
     songForm.setValue('artistId', artist.id!);
     setIsSongDialogOpen(true);
   };
+
+  const openEditArtistDialog = (artist: Artist) => {
+    editArtistForm.setValue('id', artist.id!);
+    editArtistForm.setValue('name', artist.name);
+    editArtistForm.setValue('imageUrl', artist.imageUrl || '');
+    setIsEditArtistDialogOpen(true);
+  };
   
   const openLyricsDialog = (artist: Artist, song: CatalogSong) => {
     setSelectedArtist(artist);
@@ -428,6 +460,13 @@ export function CatalogManagement() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  <FormField control={artistForm.control} name="imageUrl" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Artist Image URL (Optional)</FormLabel>
+                      <FormControl><Input placeholder="https://example.com/image.png" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                   <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                     <Button type="submit" disabled={isPending}>
@@ -448,6 +487,10 @@ export function CatalogManagement() {
               <div className="flex items-center group">
                  <AccordionTrigger className={cn("font-bold text-lg flex-grow", !artist.isAvailable && "text-muted-foreground line-through")}>{artist.name}</AccordionTrigger>
                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditArtistDialog(artist)}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit Artist</span>
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleToggleArtistAvailability(artist)} disabled={isPending}>
                         {artist.isAvailable ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                         <span className="sr-only">Toggle Artist Availability</span>
@@ -540,6 +583,38 @@ export function CatalogManagement() {
                 </div>
             )}
         </Accordion>
+
+        {/* Edit Artist Dialog */}
+        <Dialog open={isEditArtistDialogOpen} onOpenChange={setIsEditArtistDialogOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit Artist</DialogTitle></DialogHeader>
+            <Form {...editArtistForm}>
+              <form onSubmit={editArtistForm.handleSubmit(handleEditArtist)} className="space-y-4">
+                <FormField control={editArtistForm.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artist Name</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={editArtistForm.control} name="imageUrl" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artist Image URL</FormLabel>
+                    <FormControl><Input placeholder="https://example.com/image.png" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <DialogFooter>
+                  <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                  <Button type="submit" disabled={isPending}>
+                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isSongDialogOpen} onOpenChange={setIsSongDialogOpen}>
           <DialogContent>
