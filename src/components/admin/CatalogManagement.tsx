@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useTransition, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -19,8 +18,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError, useStorage } from '@/firebase';
-import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, writeBatch, getDocs, updateDoc } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { uploadArtistImage } from '@/lib/storage-service';
 
@@ -33,6 +32,7 @@ const editArtistSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Artist name is required'),
 });
+
 
 const songSchema = z.object({
   artistId: z.string(),
@@ -96,6 +96,7 @@ export function CatalogManagement() {
   });
 
   const handleAddArtist = async (values: z.infer<typeof artistSchema>) => {
+    if (!firestore) return;
     startTransition(() => {
       const artistsCol = collection(firestore, 'artists');
       addDocumentNonBlocking(firestore, artistsCol, {
@@ -133,7 +134,7 @@ export function CatalogManagement() {
             imageUrl: finalImageUrl,
         };
         
-        updateDocumentNonBlocking(firestore, artistRef, dataToUpdate);
+        await updateDoc(artistRef, dataToUpdate);
 
         toast({ title: 'Success', description: `"${values.name}" has been updated.` });
         setIsEditArtistDialogOpen(false);
@@ -148,6 +149,7 @@ export function CatalogManagement() {
 
 
   const handleAddSong = async (values: z.infer<typeof songSchema>) => {
+    if (!firestore) return;
     startTransition(() => {
       const songsCol = collection(firestore, 'artists', values.artistId, 'songs');
       addDocumentNonBlocking(firestore, songsCol, {
@@ -162,9 +164,10 @@ export function CatalogManagement() {
   };
 
   const handleUpdateLyrics = async (values: z.infer<typeof lyricsSchema>) => {
+    if (!firestore) return;
     startTransition(() => {
       const songRef = doc(firestore, 'artists', values.artistId, 'songs', values.songId);
-      updateDocumentNonBlocking(firestore, songRef, { lyrics: values.lyrics });
+      updateDoc(songRef, { lyrics: values.lyrics });
       toast({ title: 'Success', description: `Lyrics for "${values.title}" updated.` });
       lyricsForm.reset();
       setIsLyricsDialogOpen(false);
@@ -212,6 +215,7 @@ export function CatalogManagement() {
   };
 
   const handleRemoveSong = (artistId: string, songId: string, songTitle: string) => {
+    if (!firestore) return;
     startTransition(() => {
       const songRef = doc(firestore, 'artists', artistId, 'songs', songId);
       deleteDocumentNonBlocking(firestore, songRef);
@@ -220,25 +224,25 @@ export function CatalogManagement() {
   };
 
   const handleToggleArtistAvailability = (artist: Artist) => {
+    if (!firestore || !artist.id) return;
     startTransition(() => {
-      if (!artist.id) return;
-      const artistRef = doc(firestore, 'artists', artist.id);
-      updateDocumentNonBlocking(firestore, artistRef, { isAvailable: !artist.isAvailable });
+      const artistRef = doc(firestore, 'artists', artist.id!);
+      updateDoc(artistRef, { isAvailable: !artist.isAvailable });
       toast({ title: 'Success', description: `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
 
   const handleToggleSongAvailability = (artist: Artist, song: CatalogSong) => {
+    if (!firestore || !artist.id || !song.id) return;
     startTransition(() => {
-      if (!artist.id || !song.id) return;
-      const songRef = doc(firestore, 'artists', artist.id, 'songs', song.id);
-      updateDocumentNonBlocking(firestore, songRef, { isAvailable: !song.isAvailable });
+      const songRef = doc(firestore, 'artists', artist.id!, 'songs', song.id!);
+      updateDoc(songRef, { isAvailable: !song.isAvailable });
       toast({ title: 'Success', description: `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
 
   const handleAddToQueue = (values: z.infer<typeof addToQueueSchema>) => {
-    if (!selectedArtist || !selectedSong || !user) return;
+    if (!selectedArtist || !selectedSong || !user || !firestore) return;
     startTransition(() => {
       const songData = {
         singer: values.singer,
