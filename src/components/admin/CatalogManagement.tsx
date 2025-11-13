@@ -111,25 +111,22 @@ export function CatalogManagement() {
   };
 
   const handleEditArtistSubmit = async (values: z.infer<typeof editArtistSchema>) => {
-    if (!storage || !selectedArtist) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not update artist information.' });
+    if (!storage) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
         return;
     }
 
     startTransition(async () => {
       try {
-        let imageUrl = selectedArtist.imageUrl || '';
+        let imageUrl = selectedArtist?.imageUrl || '';
         
-        // A new file was selected for upload
         if (imageFileToUpdate) {
             toast({ title: 'Uploading Image...', description: 'Please wait.' });
             imageUrl = await uploadArtistImage(storage, values.id, imageFileToUpdate);
         } 
-        // A file was explicitly marked for removal
         else if (imageFileToUpdate === null) {
             imageUrl = '';
         }
-        // Otherwise, imageFileToUpdate is undefined, so we keep the existing imageUrl
 
         const artistRef = doc(firestore, 'artists', values.id);
         updateDocumentNonBlocking(artistRef, {
@@ -743,3 +740,5 @@ export function CatalogManagement() {
     </Card>
   );
 }
+
+    
