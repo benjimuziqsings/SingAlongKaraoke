@@ -110,14 +110,14 @@ export function CatalogManagement() {
     });
   };
 
-  const handleEditArtist = async (values: z.infer<typeof editArtistSchema>) => {
-    if (!storage || !selectedArtist) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Required services not available.' });
+  const handleEditArtist = (artistToEdit: Artist) => (values: z.infer<typeof editArtistSchema>) => {
+    if (!storage) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
         return;
     }
     startTransition(async () => {
       try {
-        let imageUrl = selectedArtist.imageUrl || '';
+        let imageUrl = artistToEdit.imageUrl || '';
         
         // Check if a new file is uploaded
         if (values.imageFile) {
@@ -610,7 +610,7 @@ export function CatalogManagement() {
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Artist</DialogTitle></DialogHeader>
             <Form {...editArtistForm}>
-              <form onSubmit={editArtistForm.handleSubmit(handleEditArtist)} className="space-y-4">
+              <form onSubmit={editArtistForm.handleSubmit(handleEditArtist(selectedArtist!))} className="space-y-4">
                 <FormField control={editArtistForm.control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Artist Name</FormLabel>
@@ -647,7 +647,7 @@ export function CatalogManagement() {
                                 <span className="sr-only">Remove image</span>
                             </Button>
                         </div>
-                         {(selectedArtist?.imageUrl && !value) && (
+                         {(selectedArtist?.imageUrl && value === undefined) && (
                             <div className="text-sm text-muted-foreground mt-2">
                                 Current image: <a href={selectedArtist.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">View</a>
                             </div>
@@ -749,5 +749,3 @@ export function CatalogManagement() {
     </Card>
   );
 }
-
-    
