@@ -9,6 +9,7 @@ export type CatalogSong = {
 export type Artist = {
   id?: string;
   name:string;
+  imageUrl?: string;
   songs: CatalogSong[];
   isAvailable?: boolean;
 };

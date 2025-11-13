@@ -32,6 +32,7 @@ export type GroupedSong = {
   groupedId: string; // Stable ID for the group
   title: string;
   artist: string;
+  artistImageUrl?: string; // New optional field for the artist's image
   requesters: RequesterInfo[];
   status: SongStatus;
   requestTime: number;
