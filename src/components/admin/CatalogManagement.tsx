@@ -22,15 +22,17 @@ import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@
 import { collection, doc, writeBatch, getDocs, addDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
+import { uploadArtistImage } from '@/lib/storage-service';
+import { useStorage } from '@/firebase';
 
 
 const artistSchema = z.object({
   name: z.string().min(1, 'Artist name is required'),
-  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
 const editArtistSchema = artistSchema.extend({
   id: z.string(),
+  imageFile: z.instanceof(File).optional(),
 });
 
 const songSchema = z.object({
@@ -55,6 +57,7 @@ export function CatalogManagement() {
   const { user } = useUser();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const storage = useStorage();
   const [isArtistDialogOpen, setIsArtistDialogOpen] = useState(false);
   const [isEditArtistDialogOpen, setIsEditArtistDialogOpen] = useState(false);
   const [isSongDialogOpen, setIsSongDialogOpen] = useState(false);
@@ -65,16 +68,17 @@ export function CatalogManagement() {
   const [isPending, startTransition] = useTransition();
   const [isImporting, startImportTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editArtistImageRef = useRef<HTMLInputElement>(null);
 
 
   const artistForm = useForm<z.infer<typeof artistSchema>>({
     resolver: zodResolver(artistSchema),
-    defaultValues: { name: '', imageUrl: '' },
+    defaultValues: { name: '' },
   });
 
   const editArtistForm = useForm<z.infer<typeof editArtistSchema>>({
     resolver: zodResolver(editArtistSchema),
-    defaultValues: { id: '', name: '', imageUrl: '' },
+    defaultValues: { id: '', name: '' },
   });
 
   const songForm = useForm<z.infer<typeof songSchema>>({
@@ -97,7 +101,7 @@ export function CatalogManagement() {
       const artistsCol = collection(firestore, 'artists');
       addDocumentNonBlocking(artistsCol, {
         name: values.name,
-        imageUrl: values.imageUrl || '',
+        imageUrl: '',
         isAvailable: true,
       });
       toast({ title: 'Success', description: `"${values.name}" has been added.` });
@@ -107,15 +111,31 @@ export function CatalogManagement() {
   };
 
   const handleEditArtist = async (values: z.infer<typeof editArtistSchema>) => {
-    startTransition(() => {
-      const artistRef = doc(firestore, 'artists', values.id);
-      updateDocumentNonBlocking(artistRef, {
-        name: values.name,
-        imageUrl: values.imageUrl || '',
-      });
-      toast({ title: 'Success', description: `"${values.name}" has been updated.` });
-      editArtistForm.reset();
-      setIsEditArtistDialogOpen(false);
+    if (!storage) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Storage service not available.' });
+        return;
+    }
+    startTransition(async () => {
+      try {
+        let imageUrl = selectedArtist?.imageUrl || '';
+        if (values.imageFile) {
+            toast({ title: 'Uploading Image...', description: 'Please wait.' });
+            imageUrl = await uploadArtistImage(storage, values.id, values.imageFile);
+        }
+
+        const artistRef = doc(firestore, 'artists', values.id);
+        updateDocumentNonBlocking(artistRef, {
+            name: values.name,
+            imageUrl: imageUrl,
+        });
+
+        toast({ title: 'Success', description: `"${values.name}" has been updated.` });
+        editArtistForm.reset();
+        setIsEditArtistDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to update artist:', error);
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update artist information.' });
+      }
     });
   };
 
@@ -388,9 +408,10 @@ export function CatalogManagement() {
   };
 
   const openEditArtistDialog = (artist: Artist) => {
+    setSelectedArtist(artist);
     editArtistForm.setValue('id', artist.id!);
     editArtistForm.setValue('name', artist.name);
-    editArtistForm.setValue('imageUrl', artist.imageUrl || '');
+    editArtistForm.setValue('imageFile', undefined);
     setIsEditArtistDialogOpen(true);
   };
   
@@ -457,13 +478,6 @@ export function CatalogManagement() {
                     <FormItem>
                       <FormLabel>Artist Name</FormLabel>
                       <FormControl><Input placeholder="e.g., The Rockers" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={artistForm.control} name="imageUrl" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Artist Image URL (Optional)</FormLabel>
-                      <FormControl><Input placeholder="https://example.com/image.png" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -597,12 +611,23 @@ export function CatalogManagement() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={editArtistForm.control} name="imageUrl" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Artist Image URL</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/image.png" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
+                <FormField control={editArtistForm.control} name="imageFile" render={({ field: { onChange, value, ...rest }}) => (
+                    <FormItem>
+                        <FormLabel>Artist Image</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/gif"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                        onChange(e.target.files[0]);
+                                    }
+                                }}
+                                {...rest}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
                 )} />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
