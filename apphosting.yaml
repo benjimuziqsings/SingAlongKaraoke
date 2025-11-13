@@ -4,7 +4,7 @@
 runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
-  maxInstances: 10
+  maxInstances: 100
 
 # Pin the preview URL to the latest revision of the main branch.
 # This makes it easy to share a stable link with others for testing.
