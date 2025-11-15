@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { cn } from '@/lib/utils';
@@ -132,20 +132,6 @@ export function SongRequestDialog() {
       toast({ variant: 'destructive', title: 'Error', description: 'Database not connected.' });
       return;
     }
-
-    // Definitive Check: Fetch the setting directly from Firestore on submit.
-    const settingsRef = doc(firestore, 'settings', 'requests');
-    const settingsSnap = await getDoc(settingsRef);
-    const serverSideAcceptingRequests = settingsSnap.exists() ? settingsSnap.data().acceptingRequests : false;
-
-    if (!serverSideAcceptingRequests) {
-        toast({ 
-            variant: 'destructive',
-            title: 'Requests Currently Closed', 
-            description: 'Sorry, we are not taking new song requests at this time.' 
-        });
-        return;
-    }
     
     if (!user) {
         toast({ 
@@ -155,6 +141,10 @@ export function SongRequestDialog() {
         return;
     }
 
+    // The security rule on the backend now enforces if requests are open.
+    // The client-side check is removed to prevent race conditions.
+    // The `addDocumentNonBlocking` will now fail if rules deny it, and the global error handler will catch it.
+    
     const requestsCol = collection(firestore, 'song_requests');
     addDocumentNonBlocking(firestore, requestsCol, songData);
 
