@@ -77,7 +77,6 @@ export function SongRequestDialog() {
   const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
   const { data: requestSettings } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
   
-  // Corrected Logic: Default to false (closed) if settings are not found.
   const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
@@ -488,5 +487,3 @@ export function SongRequestDialog() {
     </Dialog>
   );
 }
-
-    
