@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useTransition, useRef } from 'react';
-import { useForm } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -129,12 +130,11 @@ export function CatalogManagement() {
         // If imageFileToUpdate is undefined, do nothing to the URL, keeping the original.
 
         const artistRef = doc(firestore, 'artists', values.id);
-        const dataToUpdate = {
+        
+        await updateDoc(artistRef, {
             name: values.name,
             imageUrl: finalImageUrl,
-        };
-        
-        await updateDoc(artistRef, dataToUpdate);
+        });
 
         toast({ title: 'Success', description: `"${values.name}" has been updated.` });
         setIsEditArtistDialogOpen(false);
@@ -165,9 +165,9 @@ export function CatalogManagement() {
 
   const handleUpdateLyrics = async (values: z.infer<typeof lyricsSchema>) => {
     if (!firestore) return;
-    startTransition(() => {
+    startTransition(async () => {
       const songRef = doc(firestore, 'artists', values.artistId, 'songs', values.songId);
-      updateDoc(songRef, { lyrics: values.lyrics });
+      await updateDoc(songRef, { lyrics: values.lyrics });
       toast({ title: 'Success', description: `Lyrics for "${values.title}" updated.` });
       lyricsForm.reset();
       setIsLyricsDialogOpen(false);
@@ -225,18 +225,18 @@ export function CatalogManagement() {
 
   const handleToggleArtistAvailability = (artist: Artist) => {
     if (!firestore || !artist.id) return;
-    startTransition(() => {
+    startTransition(async () => {
       const artistRef = doc(firestore, 'artists', artist.id!);
-      updateDoc(artistRef, { isAvailable: !artist.isAvailable });
+      await updateDoc(artistRef, { isAvailable: !artist.isAvailable });
       toast({ title: 'Success', description: `"${artist.name}" is now ${artist.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
 
   const handleToggleSongAvailability = (artist: Artist, song: CatalogSong) => {
     if (!firestore || !artist.id || !song.id) return;
-    startTransition(() => {
+    startTransition(async () => {
       const songRef = doc(firestore, 'artists', artist.id!, 'songs', song.id!);
-      updateDoc(songRef, { isAvailable: !song.isAvailable });
+      await updateDoc(songRef, { isAvailable: !song.isAvailable });
       toast({ title: 'Success', description: `"${song.title}" is now ${song.isAvailable ? 'unavailable' : 'available'}.` });
     });
   };
