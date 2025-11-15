@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useAuth } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useUser, useFirestore, useAuth, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
+import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown, DoorClosed } from 'lucide-react';
 import {
   Command,
   CommandEmpty,
@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from './ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const songRequestSchema = z.object({
   singer: z.string().min(1, { message: 'Your name is required.' }),
@@ -72,6 +73,11 @@ export function SongRequestDialog() {
   const firestore = useFirestore();
   const [artistPopoverOpen, setArtistPopoverOpen] = useState(false);
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
+  
+  const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
+  const { data: requestSettings } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
+  
+  const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
 
@@ -121,6 +127,14 @@ export function SongRequestDialog() {
 
 
   const handleSubmit = (songData: any) => {
+    if (!isAcceptingRequests) {
+        toast({ 
+            title: 'Requests Currently Closed', 
+            description: 'Sorry, we are not taking new song requests at this time.' 
+        });
+        return;
+    }
+    
     if (!user) {
         toast({ 
             title: 'Please Sign In', 
@@ -191,267 +205,281 @@ export function SongRequestDialog() {
           </DialogDescription>
         </DialogHeader>
 
+        {!isAcceptingRequests && (
+            <Alert variant="destructive" className="mt-4">
+                <DoorClosed className="h-4 w-4" />
+                <AlertTitle>Requests Are Currently Closed</AlertTitle>
+                <AlertDescription>
+                The KJ is not taking any new song requests at this time. Please check back later!
+                </AlertDescription>
+            </Alert>
+        )}
+
         <Tabs defaultValue="catalog" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="catalog">From Catalog</TabsTrigger>
             <TabsTrigger value="suggestion">Suggest New</TabsTrigger>
           </TabsList>
           <TabsContent value="catalog">
-            <Form {...catalogForm}>
-              <form onSubmit={catalogForm.handleSubmit(onCatalogSubmit)} className="space-y-4 pt-4">
-                 <FormField
-                  control={catalogForm.control}
-                  name="singer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Your Name (for the KJ)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., John D." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={catalogForm.control}
-                  name="artist"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Artist</FormLabel>
-                       {isCatalogLoading ? <Skeleton className="h-10 w-full" /> : (
-                        <Popover open={artistPopoverOpen} onOpenChange={setArtistPopoverOpen}>
-                          <PopoverTrigger asChild>
+            <fieldset disabled={!isAcceptingRequests}>
+                <Form {...catalogForm}>
+                <form onSubmit={catalogForm.handleSubmit(onCatalogSubmit)} className="space-y-4 pt-4">
+                    <FormField
+                    control={catalogForm.control}
+                    name="singer"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Your Name (for the KJ)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., John D." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={catalogForm.control}
+                    name="artist"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Artist</FormLabel>
+                        {isCatalogLoading ? <Skeleton className="h-10 w-full" /> : (
+                            <Popover open={artistPopoverOpen} onOpenChange={setArtistPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value
+                                    ? artists.find(
+                                        (artist) => artist.name === field.value
+                                        )?.name
+                                    : "Select an artist"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                <CommandInput placeholder="Search artist..." />
+                                <CommandList>
+                                    <CommandEmpty>No artist found.</CommandEmpty>
+                                    <CommandGroup>
+                                    {artists.map((artist) => (
+                                        <CommandItem
+                                        value={artist.name}
+                                        key={artist.id}
+                                        onSelect={() => {
+                                            catalogForm.setValue("artist", artist.name)
+                                            setArtistPopoverOpen(false)
+                                        }}
+                                        >
+                                        <Check
+                                            className={cn(
+                                            "mr-2 h-4 w-4",
+                                            artist.name === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                            )}
+                                        />
+                                        {artist.name}
+                                        </CommandItem>
+                                    ))}
+                                    </CommandGroup>
+                                </CommandList>
+                                </Command>
+                            </PopoverContent>
+                            </Popover>
+                        )}
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={catalogForm.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Song</FormLabel>
+                        <Popover open={songPopoverOpen} onOpenChange={setSongPopoverOpen}>
+                            <PopoverTrigger asChild>
                             <FormControl>
-                              <Button
+                                <Button
                                 variant="outline"
                                 role="combobox"
+                                disabled={!selectedArtist}
                                 className={cn(
-                                  "w-full justify-between",
-                                  !field.value && "text-muted-foreground"
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
                                 )}
-                              >
+                                >
                                 {field.value
-                                  ? artists.find(
-                                      (artist) => artist.name === field.value
-                                    )?.name
-                                  : "Select an artist"}
+                                    ? songs.find(
+                                        (song) => song.title === field.value
+                                    )?.title
+                                    : "Select a song"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
+                                </Button>
                             </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                             <Command>
-                              <CommandInput placeholder="Search artist..." />
-                              <CommandList>
-                                <CommandEmpty>No artist found.</CommandEmpty>
+                                <CommandInput placeholder="Search song..." />
+                                <CommandList>
+                                <CommandEmpty>No song found.</CommandEmpty>
                                 <CommandGroup>
-                                  {artists.map((artist) => (
+                                    {songs.map((song) => (
                                     <CommandItem
-                                      value={artist.name}
-                                      key={artist.id}
-                                      onSelect={() => {
-                                        catalogForm.setValue("artist", artist.name)
-                                        setArtistPopoverOpen(false)
-                                      }}
+                                        value={song.title}
+                                        key={song.title}
+                                        onSelect={() => {
+                                        catalogForm.setValue("title", song.title)
+                                        setSongPopoverOpen(false)
+                                        }}
                                     >
-                                      <Check
+                                        <Check
                                         className={cn(
-                                          "mr-2 h-4 w-4",
-                                          artist.name === field.value
+                                            "mr-2 h-4 w-4",
+                                            song.title === field.value
                                             ? "opacity-100"
                                             : "opacity-0"
                                         )}
-                                      />
-                                      {artist.name}
+                                        />
+                                        {song.title}
                                     </CommandItem>
-                                  ))}
+                                    ))}
                                 </CommandGroup>
-                              </CommandList>
+                                </CommandList>
                             </Command>
-                          </PopoverContent>
+                            </PopoverContent>
                         </Popover>
-                       )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={catalogForm.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Song</FormLabel>
-                       <Popover open={songPopoverOpen} onOpenChange={setSongPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              disabled={!selectedArtist}
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? songs.find(
-                                    (song) => song.title === field.value
-                                  )?.title
-                                : "Select a song"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search song..." />
-                             <CommandList>
-                              <CommandEmpty>No song found.</CommandEmpty>
-                              <CommandGroup>
-                                {songs.map((song) => (
-                                  <CommandItem
-                                    value={song.title}
-                                    key={song.title}
-                                    onSelect={() => {
-                                      catalogForm.setValue("title", song.title)
-                                      setSongPopoverOpen(false)
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        song.title === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {song.title}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={catalogForm.control}
-                  name="announcement"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Special Announcement (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="e.g., Happy birthday, Sarah!"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                   <DialogClose asChild>
-                    <Button type="button" variant="secondary">
-                      Cancel
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={catalogForm.control}
+                    name="announcement"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Special Announcement (Optional)</FormLabel>
+                        <FormControl>
+                            <Textarea
+                            placeholder="e.g., Happy birthday, Sarah!"
+                            {...field}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">
+                        Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={catalogForm.formState.isSubmitting || !isAcceptingRequests}>
+                        {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
                     </Button>
-                  </DialogClose>
-                  <Button type="submit" disabled={catalogForm.formState.isSubmitting}>
-                    {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+                    </DialogFooter>
+                </form>
+                </Form>
+            </fieldset>
           </TabsContent>
           <TabsContent value="suggestion">
-             <Form {...suggestionForm}>
-              <form onSubmit={suggestionForm.handleSubmit(onSuggestionSubmit)} className="space-y-4 pt-4">
-                 <FormField
-                  control={suggestionForm.control}
-                  name="singer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Your Name (for the KJ)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Jane D." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={suggestionForm.control}
-                  name="artist"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Artist</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., The Beatles" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={suggestionForm.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Song Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Hey Jude" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={suggestionForm.control}
-                  name="announcement"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Special Announcement (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="e.g., This one's for my friends!"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={suggestionForm.control}
-                  name="tip"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tip (optional)</FormLabel>
-                       <FormControl>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input type="number" placeholder="5.00" className="pl-8" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                   <DialogClose asChild>
-                    <Button type="button" variant="secondary">
-                      Cancel
+             <fieldset disabled={!isAcceptingRequests}>
+                <Form {...suggestionForm}>
+                <form onSubmit={suggestionForm.handleSubmit(onSuggestionSubmit)} className="space-y-4 pt-4">
+                    <FormField
+                    control={suggestionForm.control}
+                    name="singer"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Your Name (for the KJ)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Jane D." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={suggestionForm.control}
+                    name="artist"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Artist</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., The Beatles" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={suggestionForm.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Song Title</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Hey Jude" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={suggestionForm.control}
+                    name="announcement"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Special Announcement (Optional)</FormLabel>
+                        <FormControl>
+                            <Textarea
+                            placeholder="e.g., This one's for my friends!"
+                            {...field}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={suggestionForm.control}
+                    name="tip"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Tip (optional)</FormLabel>
+                        <FormControl>
+                            <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input type="number" placeholder="5.00" className="pl-8" {...field} />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">
+                        Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={suggestionForm.formState.isSubmitting || !isAcceptingRequests}>
+                        {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest Song'}
                     </Button>
-                  </DialogClose>
-                  <Button type="submit" disabled={suggestionForm.formState.isSubmitting}>
-                    {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest Song'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+                    </DialogFooter>
+                </form>
+                </Form>
+             </fieldset>
           </TabsContent>
         </Tabs>
       </DialogContent>
