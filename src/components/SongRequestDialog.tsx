@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useAuth, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
@@ -77,6 +77,7 @@ export function SongRequestDialog() {
   const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
   const { data: requestSettings } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
   
+  // Corrected Logic: Default to false (closed) if settings are not found.
   const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
@@ -129,6 +130,7 @@ export function SongRequestDialog() {
   const handleSubmit = (songData: any) => {
     if (!isAcceptingRequests) {
         toast({ 
+            variant: 'destructive',
             title: 'Requests Currently Closed', 
             description: 'Sorry, we are not taking new song requests at this time.' 
         });
@@ -486,3 +488,5 @@ export function SongRequestDialog() {
     </Dialog>
   );
 }
+
+    
