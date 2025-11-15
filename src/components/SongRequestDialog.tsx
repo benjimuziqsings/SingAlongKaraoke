@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, getDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { cn } from '@/lib/utils';
@@ -75,8 +75,9 @@ export function SongRequestDialog() {
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
   
   const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
-  const { data: requestSettings } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
+  const { data: requestSettings, isLoading: isSettingsLoading } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
   
+  // Default to false (closed) until data is loaded. This is a safer default.
   const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
@@ -126,8 +127,18 @@ export function SongRequestDialog() {
   }, [user, isOpen, catalogForm, suggestionForm]);
 
 
-  const handleSubmit = (songData: any) => {
-    if (!isAcceptingRequests) {
+  const handleSubmit = async (songData: any) => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Database not connected.' });
+      return;
+    }
+
+    // Definitive Check: Fetch the setting directly from Firestore on submit.
+    const settingsRef = doc(firestore, 'settings', 'requests');
+    const settingsSnap = await getDoc(settingsRef);
+    const serverSideAcceptingRequests = settingsSnap.exists() ? settingsSnap.data().acceptingRequests : false;
+
+    if (!serverSideAcceptingRequests) {
         toast({ 
             variant: 'destructive',
             title: 'Requests Currently Closed', 
@@ -141,11 +152,6 @@ export function SongRequestDialog() {
             title: 'Please Sign In', 
             description: 'You need to be signed in to make a request. Please sign in or create an account.' 
         });
-        return;
-    }
-
-    if (!firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Database not connected.' });
         return;
     }
 
@@ -206,7 +212,9 @@ export function SongRequestDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {!isAcceptingRequests && (
+        {isSettingsLoading ? (
+            <Skeleton className="h-20 w-full" />
+        ) : !isAcceptingRequests && (
             <Alert variant="destructive" className="mt-4">
                 <DoorClosed className="h-4 w-4" />
                 <AlertTitle>Requests Are Currently Closed</AlertTitle>
@@ -222,7 +230,7 @@ export function SongRequestDialog() {
             <TabsTrigger value="suggestion">Suggest New</TabsTrigger>
           </TabsList>
           <TabsContent value="catalog">
-            <fieldset disabled={!isAcceptingRequests}>
+            <fieldset disabled={!isAcceptingRequests || isSettingsLoading}>
                 <Form {...catalogForm}>
                 <form onSubmit={catalogForm.handleSubmit(onCatalogSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -385,7 +393,7 @@ export function SongRequestDialog() {
                         Cancel
                         </Button>
                     </DialogClose>
-                    <Button type="submit" disabled={catalogForm.formState.isSubmitting || !isAcceptingRequests}>
+                    <Button type="submit" disabled={catalogForm.formState.isSubmitting || !isAcceptingRequests || isSettingsLoading}>
                         {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
                     </Button>
                     </DialogFooter>
@@ -394,7 +402,7 @@ export function SongRequestDialog() {
             </fieldset>
           </TabsContent>
           <TabsContent value="suggestion">
-             <fieldset disabled={!isAcceptingRequests}>
+             <fieldset disabled={!isAcceptingRequests || isSettingsLoading}>
                 <Form {...suggestionForm}>
                 <form onSubmit={suggestionForm.handleSubmit(onSuggestionSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -474,7 +482,7 @@ export function SongRequestDialog() {
                         Cancel
                         </Button>
                     </DialogClose>
-                    <Button type="submit" disabled={suggestionForm.formState.isSubmitting || !isAcceptingRequests}>
+                    <Button type="submit" disabled={suggestionForm.formState.isSubmitting || !isAcceptingRequests || isSettingsLoading}>
                         {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest Song'}
                     </Button>
                     </DialogFooter>
@@ -487,3 +495,5 @@ export function SongRequestDialog() {
     </Dialog>
   );
 }
+
+    
