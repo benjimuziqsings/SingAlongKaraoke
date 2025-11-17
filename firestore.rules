@@ -18,12 +18,14 @@ service cloud.firestore {
 
     // Function to check if song requests are currently being accepted.
     function requestsAreOpen() {
-      return get(/databases/$(database)/documents/settings/requests).data.acceptingRequests == true;
+      // Allow write if the settings document doesn't exist yet, default to open
+      return !exists(/databases/$(database)/documents/settings/requests) || get(/databases/$(database)/documents/settings/requests).data.acceptingRequests == true;
     }
 
     // Patrons
     match /patrons/{patronId} {
       allow read: if isOwner(patronId) || isKJ();
+      // A user can create their own patron document if the ID matches their UID.
       allow create: if isOwner(patronId);
       allow update: if isOwner(patronId) || isKJ();
       allow delete: if false;
