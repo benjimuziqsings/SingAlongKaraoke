@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, getDoc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown, DoorClosed } from 'lucide-react';
+import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
 import {
   Command,
   CommandEmpty,
@@ -48,7 +48,7 @@ import {
 } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from './ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+
 
 const songRequestSchema = z.object({
   singer: z.string().min(1, { message: 'Your name is required.' }),
@@ -74,12 +74,6 @@ export function SongRequestDialog() {
   const [artistPopoverOpen, setArtistPopoverOpen] = useState(false);
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
   
-  const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
-  const { data: requestSettings, isLoading: isSettingsLoading } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
-  
-  // Default to false (closed) until data is loaded. This is a safer default.
-  const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
-
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
@@ -141,10 +135,6 @@ export function SongRequestDialog() {
         return;
     }
 
-    // The security rule on the backend now enforces if requests are open.
-    // The client-side check is removed to prevent race conditions.
-    // The `addDocumentNonBlocking` will now fail if rules deny it, and the global error handler will catch it.
-    
     const requestsCol = collection(firestore, 'song_requests');
     addDocumentNonBlocking(firestore, requestsCol, songData);
 
@@ -202,25 +192,12 @@ export function SongRequestDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {isSettingsLoading ? (
-            <Skeleton className="h-20 w-full" />
-        ) : !isAcceptingRequests && (
-            <Alert variant="destructive" className="mt-4">
-                <DoorClosed className="h-4 w-4" />
-                <AlertTitle>Requests Are Currently Closed</AlertTitle>
-                <AlertDescription>
-                The KJ is not taking any new song requests at this time. Please check back later!
-                </AlertDescription>
-            </Alert>
-        )}
-
         <Tabs defaultValue="catalog" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="catalog">From Catalog</TabsTrigger>
             <TabsTrigger value="suggestion">Suggest New</TabsTrigger>
           </TabsList>
           <TabsContent value="catalog">
-            <fieldset disabled={!isAcceptingRequests || isSettingsLoading}>
                 <Form {...catalogForm}>
                 <form onSubmit={catalogForm.handleSubmit(onCatalogSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -383,16 +360,14 @@ export function SongRequestDialog() {
                         Cancel
                         </Button>
                     </DialogClose>
-                    <Button type="submit" disabled={catalogForm.formState.isSubmitting || !isAcceptingRequests || isSettingsLoading}>
+                    <Button type="submit" disabled={catalogForm.formState.isSubmitting}>
                         {catalogForm.formState.isSubmitting ? 'Submitting...' : 'Add to Queue'}
                     </Button>
                     </DialogFooter>
                 </form>
                 </Form>
-            </fieldset>
           </TabsContent>
           <TabsContent value="suggestion">
-             <fieldset disabled={!isAcceptingRequests || isSettingsLoading}>
                 <Form {...suggestionForm}>
                 <form onSubmit={suggestionForm.handleSubmit(onSuggestionSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -472,13 +447,12 @@ export function SongRequestDialog() {
                         Cancel
                         </Button>
                     </DialogClose>
-                    <Button type="submit" disabled={suggestionForm.formState.isSubmitting || !isAcceptingRequests || isSettingsLoading}>
+                    <Button type="submit" disabled={suggestionForm.formState.isSubmitting}>
                         {suggestionForm.formState.isSubmitting ? 'Submitting...' : 'Suggest Song'}
                     </Button>
                     </DialogFooter>
                 </form>
                 </Form>
-             </fieldset>
           </TabsContent>
         </Tabs>
       </DialogContent>

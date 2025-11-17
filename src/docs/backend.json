@@ -193,18 +193,6 @@
         "comment",
         "createdAt"
       ]
-    },
-    "RequestSettings": {
-      "title": "RequestSettings",
-      "type": "object",
-      "description": "Global settings for song requests.",
-      "properties": {
-        "acceptingRequests": {
-          "type": "boolean",
-          "description": "Whether the application is currently accepting new song requests."
-        }
-      },
-      "required": ["acceptingRequests"]
     }
   },
   "auth": {
@@ -254,10 +242,6 @@
         "$ref": "#/entities/Tip"
       },
       "description": "A global collection of all tips."
-    },
-    "/settings/requests": {
-      "schema": { "$ref": "#/entities/RequestSettings" },
-      "description": "Global settings for the application, such as toggling song requests."
     }
   }
 }

@@ -4,8 +4,8 @@
 import { useTransition, useState, useEffect } from 'react';
 import type { GroupedSong } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, writeBatch, getDocs, query, collection, where, updateDoc, setDoc } from 'firebase/firestore';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, writeBatch, getDocs, query, collection, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Trash2, ListMusic, Users, Music, MessageSquare, Loader2, Lock, Unlock, ShieldQuestion, DoorOpen, DoorClosed } from 'lucide-react';
+import { Play, Trash2, ListMusic, Users, Music, MessageSquare, Loader2, Lock, Unlock } from 'lucide-react';
 import { EmptyQueue } from '../EmptyQueue';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import {
@@ -41,8 +41,7 @@ import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
 import { Separator } from '../ui/separator';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
+
 
 export function AdminQueue() {
   const [isPending, startTransition] = useTransition();
@@ -50,26 +49,6 @@ export function AdminQueue() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { upcoming: upcomingSongs, held: heldSongs, history, nowPlaying, isLoading, refetch } = useQueue();
-
-  const settingsDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'requests') : null, [firestore]);
-  const { data: requestSettings } = useDoc<{ acceptingRequests: boolean }>(settingsDocRef);
-  
-  const handleToggleRequests = (isAccepting: boolean) => {
-    if (!settingsDocRef) return;
-    
-    // Use setDoc with merge to create the document if it doesn't exist
-    setDoc(settingsDocRef, { acceptingRequests: isAccepting }, { merge: true })
-      .catch(error => {
-        const permissionError = new FirestorePermissionError({
-          path: settingsDocRef.path,
-          operation: 'write',
-          requestResourceData: { acceptingRequests: isAccepting },
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
-  };
-
-  const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const handlePlayNext = (song: GroupedSong) => {
     startTransition(async () => {
@@ -208,24 +187,10 @@ export function AdminQueue() {
     <>
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <div className="space-y-2">
-            <CardTitle className="font-headline text-2xl flex items-center gap-3">
-            <ListMusic />
-            Song Queue
-            </CardTitle>
-            <div className="flex items-center space-x-2">
-                <Switch
-                    id="accepting-requests"
-                    checked={isAcceptingRequests}
-                    onCheckedChange={handleToggleRequests}
-                    aria-label="Toggle song requests"
-                />
-                <Label htmlFor="accepting-requests" className="flex items-center gap-2">
-                    {isAcceptingRequests ? <DoorOpen className="h-4 w-4" /> : <DoorClosed className="h-4 w-4" />}
-                    {isAcceptingRequests ? 'Requests are Open' : 'Requests are Closed'}
-                </Label>
-            </div>
-        </div>
+        <CardTitle className="font-headline text-2xl flex items-center gap-3">
+          <ListMusic />
+          Song Queue
+        </CardTitle>
          <div className="flex items-center gap-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
