@@ -16,6 +16,12 @@ service cloud.firestore {
       return isSignedIn() && (request.auth.token.isKJ == true || request.auth.token.email == 'benjimuziqsings@gmail.com' || request.auth.token.email == 'benjaminbailey98@gmail.com');
     }
 
+    // Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isKJ();
+    }
+
     // Patrons
     match /patrons/{patronId} {
       allow read: if isOwner(patronId) || isKJ();
@@ -27,9 +33,13 @@ service cloud.firestore {
     
     // Song Requests
     match /song_requests/{songRequestId} {
+      function areRequestsOpen() {
+          return get(/databases/$(database)/documents/settings/requests).data.acceptingRequests == true;
+      }
+
       allow read: if isSignedIn();
-      // Patrons can create their own requests.
-      allow create: if isOwner(request.resource.data.patronId) || isKJ();
+      // Patrons can create requests only if requests are open. KJs can always create requests.
+      allow create: if (isOwner(request.resource.data.patronId) && areRequestsOpen()) || isKJ();
       // KJs can update any request (e.g., to 'playing', 'held', or 'finished').
       // Patrons can only update their own requests if they are still 'queued'.
       allow update: if isKJ() || (isOwner(resource.data.patronId) && resource.data.status == 'queued');

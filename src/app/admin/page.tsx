@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CatalogManagement } from '@/components/admin/CatalogManagement';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { RequestSettings } from '@/components/admin/RequestSettings';
 
 function AdminLoadingSkeleton() {
   return (
@@ -36,6 +37,7 @@ export default function AdminPage() {
             </TabsList>
             <TabsContent value="queue">
                 <div className="space-y-8">
+                  <RequestSettings />
                   <AdminNowPlaying />
                   <AdminQueue />
                 </div>
