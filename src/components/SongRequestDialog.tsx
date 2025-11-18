@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useCatalog } from '@/hooks/useCatalog';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
+import { DollarSign, Music, PlusCircle, Check, ChevronsUpDown, Info } from 'lucide-react';
 import {
   Command,
   CommandEmpty,
@@ -75,6 +75,16 @@ export function SongRequestDialog() {
   const [songPopoverOpen, setSongPopoverOpen] = useState(false);
   
   const artists = useMemo(() => allArtists.filter(artist => artist.isAvailable && artist.songs && artist.songs.some(s => s.isAvailable)), [allArtists]);
+  
+  const settingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'requests');
+  }, [firestore]);
+
+  const { data: requestSettings, isLoading: isSettingsLoading } = useDoc<{acceptingRequests: boolean}>(settingsRef);
+  
+  // Default to false (closed) if settings don't exist or are loading.
+  const isAcceptingRequests = requestSettings?.acceptingRequests ?? false;
 
   const catalogForm = useForm<z.infer<typeof songRequestSchema>>({
     resolver: zodResolver(songRequestSchema),
@@ -129,8 +139,18 @@ export function SongRequestDialog() {
     
     if (!user) {
         toast({ 
+            variant: "destructive",
             title: 'Please Sign In', 
-            description: 'You need to be signed in to make a request. Please sign in or create an account.' 
+            description: 'You need to be signed in to make a request.' 
+        });
+        return;
+    }
+
+    if (!isAcceptingRequests) {
+        toast({
+            variant: "destructive",
+            title: 'Requests Are Closed',
+            description: 'The KJ is not accepting new song requests at this time. Please try again later.',
         });
         return;
     }
@@ -173,6 +193,9 @@ export function SongRequestDialog() {
     suggestionForm.reset();
   }
 
+  const isFormDisabled = !isAcceptingRequests || isSettingsLoading;
+  const formsDisabledMessage = isSettingsLoading ? 'Loading settings...' : 'The KJ is not accepting new song requests at this time.';
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -191,6 +214,13 @@ export function SongRequestDialog() {
             Choose from our catalog or suggest a new song.
           </DialogDescription>
         </DialogHeader>
+        
+        {isFormDisabled && (
+            <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-900/20 text-yellow-300 border border-yellow-700/50">
+                <Info className="h-5 w-5"/>
+                <p className="text-sm">{formsDisabledMessage}</p>
+            </div>
+        )}
 
         <Tabs defaultValue="catalog" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -198,6 +228,7 @@ export function SongRequestDialog() {
             <TabsTrigger value="suggestion">Suggest New</TabsTrigger>
           </TabsList>
           <TabsContent value="catalog">
+                <fieldset disabled={isFormDisabled}>
                 <Form {...catalogForm}>
                 <form onSubmit={catalogForm.handleSubmit(onCatalogSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -366,8 +397,10 @@ export function SongRequestDialog() {
                     </DialogFooter>
                 </form>
                 </Form>
+                </fieldset>
           </TabsContent>
           <TabsContent value="suggestion">
+                <fieldset disabled={isFormDisabled}>
                 <Form {...suggestionForm}>
                 <form onSubmit={suggestionForm.handleSubmit(onSuggestionSubmit)} className="space-y-4 pt-4">
                     <FormField
@@ -453,11 +486,10 @@ export function SongRequestDialog() {
                     </DialogFooter>
                 </form>
                 </Form>
+                </fieldset>
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

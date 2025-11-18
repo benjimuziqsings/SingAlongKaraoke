@@ -188,12 +188,26 @@
         "comment",
         "createdAt"
       ]
+    },
+    "RequestSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RequestSettings",
+      "type": "object",
+      "description": "Global settings for song requests.",
+      "properties": {
+        "acceptingRequests": {
+          "type": "boolean",
+          "description": "Whether new song requests are currently being accepted."
+        }
+      },
+      "required": [
+        "acceptingRequests"
+      ]
     }
   },
   "auth": {
     "providers": [
-      "email",
-      "google.com"
+      "email"
     ],
     "customClaims": {
       "isKJ": {
@@ -238,6 +252,12 @@
         "$ref": "#/entities/Tip"
       },
       "description": "A global collection of all tips."
+    },
+    "/settings/requests": {
+      "schema": {
+        "$ref": "#/entities/RequestSettings"
+      },
+      "description": "Singleton document for global request settings."
     }
   }
 }
