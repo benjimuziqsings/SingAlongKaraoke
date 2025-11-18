@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { Patron } from '@/lib/types';
 
 export interface UsePatronsResult {
   patrons: Patron[];
   isLoading: boolean;
   error: Error | null;
+  refetch: () => void;
 }
 
 export function usePatrons(): UsePatronsResult {
@@ -20,12 +21,19 @@ export function usePatrons(): UsePatronsResult {
     return query(collection(firestore, 'patrons'));
   }, [firestore]);
 
-  const { data, isLoading, error } = useCollection<Patron>(patronsQuery);
-
+  const { data, isLoading, error, refetch: refetchCollection } = useCollection<Patron>(patronsQuery);
+  
   const patrons = useMemo(() => {
     if (!data) return [];
     return data.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
   }, [data]);
+  
+  const refetch = useCallback(() => {
+    if (refetchCollection) {
+        refetchCollection();
+    }
+  }, [refetchCollection]);
 
-  return { patrons, isLoading, error };
+
+  return { patrons, isLoading, error, refetch };
 }

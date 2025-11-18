@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to check authentication status and ownership.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // Check if the user has the 'isKJ' custom claim in their auth token or is a hardcoded admin email.
+    function isKJ() {
+      return isSignedIn() && (request.auth.token.isKJ == true || request.auth.token.email == 'benjimuziqsings@gmail.com' || request.auth.token.email == 'benjaminbailey98@gmail.com');
+    }
+
+    // Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isKJ();
+    }
+
+    // Patrons
+    match /patrons/{patronId} {
+      allow read: if isOwner(patronId) || isKJ();
+      // A user can create their own patron document if the ID matches their UID.
+      allow create: if isOwner(patronId);
+      allow update: if isOwner(patronId) || isKJ();
+      allow delete: if false;
+    }
+    
+    // Song Requests
+    match /song_requests/{songRequestId} {
+      function areRequestsOpen() {
+          return get(/databases/$(database)/documents/settings/requests).data.acceptingRequests == true;
+      }
+
+      allow read: if isSignedIn();
+      // Patrons can create requests only if requests are open. KJs can always create requests.
+      allow create: if (isOwner(request.resource.data.patronId) && areRequestsOpen()) || isKJ();
+      // KJs can update any request (e.g., to 'playing', 'held', or 'finished').
+      // Patrons can only update their own requests if they are still 'queued'.
+      allow update: if isKJ() || (isOwner(resource.data.patronId) && resource.data.status == 'queued');
+      // KJs can delete any song request. Patrons can delete their own 'queued' requests.
+      allow delete: if isKJ() || (isOwner(resource.data.patronId) && resource.data.status == 'queued');
+    }
+
+    // Artists and Songs catalog
+    match /artists/{artistId} {
+      // Anyone can read the catalog.
+      allow read: if true;
+      // Only the KJ can write to the catalog.
+      allow write: if isKJ();
+
+      match /songs/{songId} {
+          // Anyone can read songs.
+          allow read: if true;
+          // Only the KJ can write songs.
+          allow write: if isKJ();
+      }
+    }
+    
+    // Reviews
+    match /reviews/{reviewId} {
+        // Anyone can read reviews.
+        allow read: if true;
+        // Authenticated users can create reviews.
+        allow create: if isSignedIn();
+        // KJs can delete reviews.
+        allow delete: if isKJ();
+        // Nobody can update reviews once created.
+        allow update: if false; 
+    }
+
+    // Tips
+    match /tips/{tipId} {
+        // Only the KJ can see the list of tips.
+        allow read: if isKJ();
+        // Any authenticated user can create a tip.
+        allow create: if isSignedIn();
+        // Nobody can update or delete tips.
+        allow update, delete: if false;
+    }
+  }
+}
