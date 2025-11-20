@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePatrons } from '@/hooks/usePatrons';
@@ -71,7 +72,7 @@ export function UserManagement() {
             toast({ title: 'Success', description: 'All reviews have been cleared.' });
         } catch (error: any) {
             console.error('Error clearing reviews:', error);
-             const permissionError = new FirestorePermissionError({
+            const permissionError = new FirestorePermissionError({
                 path: 'reviews',
                 operation: 'delete',
             });
