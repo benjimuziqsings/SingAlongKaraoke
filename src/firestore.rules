@@ -64,9 +64,8 @@ service cloud.firestore {
     
     // Reviews
     match /reviews/{reviewId} {
-        // Patrons and KJs can read individual reviews.
-        // KJs can also list all reviews (needed for the clear all function).
-        allow read: if isSignedIn() || isKJ();
+        // Anyone can read reviews.
+        allow read: if true;
         // Authenticated users can create reviews.
         allow create: if isSignedIn();
         // KJs can delete reviews.
