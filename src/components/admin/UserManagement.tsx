@@ -72,11 +72,15 @@ export function UserManagement() {
             toast({ title: 'Success', description: 'All reviews have been cleared.' });
         } catch (error: any) {
             console.error('Error clearing reviews:', error);
-            const permissionError = new FirestorePermissionError({
-                path: 'reviews',
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            if (error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: 'reviews',
+                    operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            } else {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not clear reviews.' });
+            }
         }
     });
   };
