@@ -7,10 +7,6 @@ import { initializeFirebase } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface FirebaseClientProviderProps {
-  children: ReactNode;
-}
-
 const AUTH_ROUTES = ['/'];
 const PROTECTED_ROUTES = ['/home', '/admin', '/reviews', '/profile'];
 
@@ -34,8 +30,9 @@ function AuthHandler({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isUserLoading) return; // Wait for user status to be confirmed
 
-    const isAuthRoute = AUTH_ROUTES.includes(pathname);
-    const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+    const isAuthRoute = pathname === '/';
+    // A route is protected if it's in the list AND it's not the root auth page.
+    const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route) && route !== '/');
 
     if (user && isAuthRoute) {
       if (isKJ) {
@@ -53,9 +50,10 @@ function AuthHandler({ children }: { children: ReactNode }) {
   }
   
   // Prevent rendering children on server-side if route is protected and user is not yet known
-  if (typeof window === 'undefined' && PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
+  if (typeof window === 'undefined' && PROTECTED_ROUTES.some(route => pathname.startsWith(route) && route !== '/')) {
     return <GlobalLoadingSkeleton />;
   }
+
 
   return <>{children}</>;
 }
