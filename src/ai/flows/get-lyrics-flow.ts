@@ -10,6 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import { karaokeCatalog } from '@/lib/karaoke-catalog';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const GetLyricsInputSchema = z.object({
   title: z.string().describe('The title of the song.'),
@@ -25,8 +26,8 @@ export type GetLyricsOutput = z.infer<typeof GetLyricsOutputSchema>;
 
 const lyricsPrompt = ai.definePrompt({
   name: 'lyricsPrompt',
-  input: { schema: GetLyricsInputSchema },
-  output: { schema: GetLyricsOutputSchema },
+  input: {schema: GetLyricsInputSchema},
+  output: {schema: GetLyricsOutputSchema},
   prompt: `Find the lyrics for the song "{{title}}" by "{{artist}}". Return only the lyrics. If you cannot find the lyrics, return a message saying "Lyrics not found.".`,
 });
 
@@ -47,9 +48,15 @@ const getLyricsFlow = ai.defineFlow(
     }
 
     // If not found, use the AI prompt
-    const { output } = await lyricsPrompt(input);
-    
-    return output!;
+    const llmResponse = await ai.generate({
+        model: googleAI('gemini-pro'),
+        prompt: `Find the lyrics for the song "${input.title}" by "${input.artist}". Return only the lyrics. If you cannot find the lyrics, return a message saying "Lyrics not found.".`,
+        output: {
+            schema: GetLyricsOutputSchema,
+        }
+    });
+
+    return llmResponse.output()!;
   }
 );
 
