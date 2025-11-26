@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import { karaokeCatalog } from '@/lib/karaoke-catalog';
 import { defineFlow, definePrompt, generate } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
