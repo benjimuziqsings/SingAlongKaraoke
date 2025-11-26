@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -24,10 +24,10 @@ export function RequestSettings() {
 
   // Initialize the document if it doesn't exist.
   useEffect(() => {
-    if (!isLoading && !settings && settingsRef) {
-      setDoc(settingsRef, { acceptingRequests: false });
+    if (!isLoading && !settings && settingsRef && firestore) {
+      setDocumentNonBlocking(firestore, settingsRef, { acceptingRequests: false }, { merge: true });
     }
-  }, [isLoading, settings, settingsRef]);
+  }, [isLoading, settings, settingsRef, firestore]);
 
   const handleToggle = (isToggled: boolean) => {
     if (!settingsRef || !firestore) {
