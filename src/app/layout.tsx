@@ -30,17 +30,18 @@ export default function RootLayout({
         <meta name="description" content="Real-time karaoke song requests and queue management." />
       </head>
       <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
-        {bgImage && (
-          <Image
-            src={bgImage.imageUrl}
-            alt={bgImage.description}
-            fill
-            className="object-cover -z-10 opacity-10"
-            data-ai-hint={bgImage.imageHint}
-          />
-        )}
         <FirebaseClientProvider>
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col relative">
+              {bgImage && (
+                <Image
+                  src={bgImage.imageUrl}
+                  alt={bgImage.description}
+                  fill
+                  priority
+                  className="object-cover -z-10 opacity-10"
+                  data-ai-hint={bgImage.imageHint}
+                />
+              )}
               <main className="flex-1">{children}</main>
               <footer className="py-4 px-6 text-center text-sm text-muted-foreground">
                 <Link href="/privacy/policy" className="hover:text-primary underline">
