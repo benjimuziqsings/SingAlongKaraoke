@@ -162,7 +162,7 @@ export default function ProfilePage() {
         errorEmitter.emit('permission-error', permissionError);
       });
     }
-  }, [patronDocRef, user, profileForm]);
+  }, [patronDocRef, user]);
 
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
