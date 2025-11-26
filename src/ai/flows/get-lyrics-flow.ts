@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit/zod';
+import {z} from 'zod';
 import { karaokeCatalog } from '@/lib/karaoke-catalog';
 
 const GetLyricsInputSchema = z.object({
@@ -47,9 +47,9 @@ const getLyricsFlow = ai.defineFlow(
     }
 
     // If not found, use the AI prompt
-    const llmResponse = await lyricsPrompt(input);
+    const { output } = await lyricsPrompt(input);
     
-    return llmResponse.output()!;
+    return output!;
   }
 );
 
