@@ -12,17 +12,17 @@ Your app is deployed, but to be fully "production-ready," follow these steps:
 
 To enable the tipping feature, you must add your Stripe API keys to Firebase as secrets.
 
-1.  **Get Stripe Keys:**
-    *   Sign up or log in to your [Stripe Dashboard](https://dashboard.stripe.com/).
-    *   Go to the **Developers** > **API keys** section.
-    *   Find your **Publishable key** (starts with `pk_...`) and your **Secret key** (starts with `sk_...`).
+1.  **Go to your Firebase App Hosting dashboard:**
+    *   Navigate to the [Firebase Console](https://console.firebase.google.com/).
+    *   Go to the **App Hosting** section and select your backend.
 
-2.  **Add Keys to Firebase App Hosting:**
-    *   Go to your [Firebase Console](https://console.firebase.google.com/).
-    *   Navigate to the **App Hosting** section and select your backend.
+2.  **Add Keys as Secrets:**
     *   Under the **Settings** tab, add the following two secrets:
-        *   **Secret name:** `STRIPE_SECRET_KEY`, **Secret value:** Paste your Stripe Secret key.
-        *   **Secret name:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, **Secret value:** Paste your Stripe Publishable key.
+        *   **Secret name:** `STRIPE_SECRET_KEY`
+        *   **Secret value:** `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`
+    *   Create a second secret:
+        *   **Secret name:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+        *   **Secret value:** `pk_live_51RvrqVI2hiCz7iuipMK56C0QXcPYjjzMQ9lral68Vd8AF9D3yhQtRBPGq8uPskxXYCiiCPtBxeu7mcbL9ptEFrML00NoA8IYa6`
     *   After adding the secrets, App Hosting will automatically trigger a new rollout to apply them.
 
 ### 2. Connect a Custom Domain
