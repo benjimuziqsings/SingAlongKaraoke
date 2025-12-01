@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow to retrieve song lyrics.
@@ -26,8 +27,8 @@ export type GetLyricsOutput = z.infer<typeof GetLyricsOutputSchema>;
 
 const lyricsPrompt = ai.definePrompt({
   name: 'lyricsPrompt',
-  input: {schema: GetLyricsInputSchema},
-  output: {schema: GetLyricsOutputSchema},
+  input: { schema: GetLyricsInputSchema },
+  output: { schema: GetLyricsOutputSchema },
   prompt: `Find the lyrics for the song "{{title}}" by "{{artist}}". Return only the lyrics. If you cannot find the lyrics, return a message saying "Lyrics not found.".`,
 });
 
@@ -48,15 +49,12 @@ const getLyricsFlow = ai.defineFlow(
     }
 
     // If not found, use the AI prompt
-    const llmResponse = await ai.generate({
-        model: googleAI('gemini-pro'),
-        prompt: `Find the lyrics for the song "${input.title}" by "${input.artist}". Return only the lyrics. If you cannot find the lyrics, return a message saying "Lyrics not found.".`,
-        output: {
-            schema: GetLyricsOutputSchema,
-        }
+    const { output } = await lyricsPrompt({
+        ...input,
+        model: googleAI.model('gemini-pro'),
     });
 
-    return llmResponse.output()!;
+    return output;
   }
 );
 

@@ -1,6 +1,0 @@
-[build]
-include = ["/workspace/home/user/studio"]
-
-[[build.env]]
-name = "GOOGLE_BUILDABLE"
-value = "/workspace/home/user/studio"
