@@ -3,36 +3,27 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, deploy-rs }:
+  outputs = { self, nixpkgs, deploy-rs }:
     let
-      deploy-lib = deploy-rs.lib."x86_64-linux";
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
     in
     {
-      deploy = deploy-lib.activate.nixos self.nixosConfigurations.karaoke;
-
-      nixosConfigurations.karaoke = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          ({ pkgs, ... }: {
-            deployment.magicRollback = true;
-            deployment.rollback.magic = true;
-          })
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = [
+          pkgs.nodejs_20
+          self.packages.${system}.deploy
         ];
       };
 
-      devShells."x86_64-linux".default =
-        let
-          pkgs = nixpkgs.legacyPackages."x86_64-linux";
-        in
-        pkgs.mkShell {
-          buildInputs = [
-            pkgs.nodejs-20_x
-            deploy-rs.packages."x86_64-linux".deploy-rs
-          ];
-        };
+      packages.${system}.deploy = deploy-rs.lib.${system}.mkDeploy {
+        inherit pkgs;
+        main = ./apphosting.yaml;
+      };
+
+      deploy = self.packages.${system}.deploy;
     };
 }
