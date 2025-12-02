@@ -3,7 +3,7 @@
 
 # The source field tells App Hosting where your Next.js app is located.
 # An empty string indicates that the app is in the root of your repository.
-source: ''
+source: '.'
 
 runConfig:
   # Increase this value if you'd like to automatically spin up
