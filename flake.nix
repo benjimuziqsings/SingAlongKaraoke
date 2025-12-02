@@ -1,8 +1,8 @@
 {
-  description = "Singalong Karaoke Deployment";
+  description = "A flake for deploying a Next.js application with deploy-rs";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
@@ -10,45 +10,57 @@
   outputs = { self, nixpkgs, flake-utils, deploy-rs }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        packages.deploy = deploy-rs.lib.${system}.mkDeployment {
-          inherit pkgs;
-          deployment.name = "singalong-karaoke-deployment";
+        pkgs = import nixpkgs { inherit system; };
+        
+        # Define the deployment using deploy-rs
+        deployment = deploy-rs.lib.mkDeployment {
+          nodes = {
+            # Since App Hosting is a single-node environment, we define one node.
+            app = {
+              # This assumes deployment via SSH is not needed as App Hosting handles it.
+              # We focus on the build steps.
+            };
+          };
 
-          deployment.build = {
-            copy = [
-              ./apphosting.yaml
-              ./package.json
-              ./package-lock.json
-              ./next.config.js
-              ./tsconfig.json
-              ./public
-              ./src
-            ];
-            buildCommands = [
-              ''
-                # Remove node_modules if it exists to ensure a clean install
-                rm -rf node_modules
-                # Set a specific path for the npm cache
-                export NPM_CONFIG_CACHE=$(mktemp -d)
-                npm install --legacy-peer-deps
+          steps = [
+            # Step 1: Copy the entire project source to the build environment.
+            deploy-rs.lib.steps.copy {
+              name = "copy-source";
+              node = "app";
+              src = ./.;
+              dest = "/app";
+            }
+            # Step 2: Run npm install and build inside the environment.
+            deploy-rs.lib.steps.run {
+              name = "build-app";
+              node = "app";
+              command = ''
+                cd /app
+                npm install
                 npm run build
-              ''
-            ];
-          };
-
-          deployment.start = {
-            exec = "npm run start";
-          };
-        };
-
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            pkgs.nodejs_20
-            pkgs.deploy-rs
+              '';
+            }
           ];
         };
+      in
+      {
+        packages = {
+          # This is the deploy attribute the build system is looking for.
+          deploy = deployment;
+
+          # Development shell for local use.
+          default = pkgs.mkShell {
+            packages = [
+              pkgs.nodejs_20
+            ];
+          };
+        };
+
+        # This allows running 'nix run .#deploy' locally if needed for testing.
+        apps.deploy = deploy-rs.lib.apps.deploy {
+          inherit deployment;
+          node = "app";
+        };
+
       });
 }
