@@ -1,62 +1,53 @@
-
 {
-  description = "Sing A Long Karaoke Next.js App";
+  description = "A Next.js application for karaoke song requests.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
 
-  outputs = { self, nixpkgs, deploy-rs }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
-    in
-    {
-      devShells.${system}.default = pkgs.mkShell {
-        name = "karaoke-dev-shell";
-        buildInputs = with pkgs; [
-          nodejs_20
-          deploy-rs.packages.${system}.deploy-rs
-        ];
-      };
+  outputs = { self, nixpkgs, flake-utils, deploy-rs }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+        };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          packages = [
+            pkgs.nodejs_20
+            deploy-rs.packages.${system}.deploy-rs
+          ];
+        };
 
-      deploy.nodes.karaokeApp = {
-        hostname = "localhost";
-        profiles.system.path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.karaoke;
-      };
-
-      nixosConfigurations.karaoke = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [({ pkgs, ... }: {
+        packages.${system}.deploy = deploy-rs.lib.${system}.mkDeployment {
+          inherit pkgs;
           deployment = {
-            magicRollback = true;
+            name = "singalong-karaoke";
             user = "root";
-            targetHost = null;
+            userHome = "/root";
+            
             steps = [
               {
-                # Install npm dependencies
-                name = "npm-install";
-                command = "npm install";
-                path = [ pkgs.nodejs_20 ];
+                name = "Install dependencies";
+                run = "npm install";
               }
               {
-                # Build the Next.js application
-                name = "npm-build";
-                command = "npm run build";
-                path = [ pkgs.nodejs_20 ];
+                name = "Build Next.js app";
+                run = "npm run build";
               }
             ];
-            service = {
-              # Systemd service to run the app
-              name = "singalong-karaoke";
-              user = "root";
-              # Use npm run start to launch the Next.js server
+            
+            services.app = {
+              type = "simple";
               exec = "npm run start";
-              path = [ pkgs.nodejs_20 ];
             };
+
+            rollback.magic = true;
           };
-        })];
-      };
-    };
+        };
+      }
+    );
 }
