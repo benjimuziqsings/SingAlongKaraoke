@@ -23,7 +23,6 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useQueue } from '@/hooks/useQueue';
 import { Skeleton } from '../ui/skeleton';
-import { LyricsDialog } from '../LyricsDialog';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 
 
@@ -119,7 +118,6 @@ export function AdminNowPlaying() {
                       </Tooltip>
                     </TooltipProvider>
                   )}
-                  <LyricsDialog song={nowPlaying} />
                 </div>
               </div>
             </div>

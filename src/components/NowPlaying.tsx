@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Mic2, Music, Users } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from './ui/button';
-import { LyricsDialog } from './LyricsDialog';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
@@ -64,7 +63,6 @@ export function NowPlaying({ song }: NowPlayingProps) {
                       </ul>
                     </PopoverContent>
                   </Popover>
-                  <LyricsDialog song={song} />
                 </div>
               </div>
             </div>
