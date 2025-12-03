@@ -2,7 +2,7 @@
   description = "A Next.js application for Sing A Long Karaoke";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
     flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
@@ -10,56 +10,50 @@
   outputs = { self, nixpkgs, flake-utils, deploy-rs }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.nodejs-20_x.enable = true;
-        };
+        pkgs = nixpkgs.legacyPackages.${system};
 
         deployment = deploy-rs.lib.${system}.mkDeployment {
           inherit pkgs;
+          deploymentName = "sing-a-long-karaoke-deployment";
 
-          deployment.name = "sing-a-long-karaoke-deployment";
-
-          # This section tells deploy-rs how to build the app
           steps = [
-            {
-              # Copy all source files to the deployment environment
-              name = "Copy sources";
-              type = "copy";
-              paths = [ ./apphosting.yaml ./next.config.js ./package.json ./public ./src ./tailwind.config.ts ./tsconfig.json ];
-            }
-            {
-              # Install npm dependencies
-              name = "NPM install";
-              type = "shell";
-              command = "npm install";
-            }
-            {
-              # Build the Next.js application
-              name = "NPM build";
-              type = "shell";
-              command = "npm run build";
-            }
-          ];
+            (deploy-rs.lib.steps.build {
+              # build the Next.js app
+              buildCommand = ''
+                npm install
+                npm run build
+              '';
+              # specify the paths that should be copied to the deployment
+              copyPaths = [
+                { from = ./public; to = ./public; }
+                { from = ./package.json; to = ./package.json; }
+                { from = ./.next/standalone; to = ./.next/standalone; }
+                { from = ./.next/static; to = ./.next/static; }
+              ];
+            })
 
-          # This section defines the service that will be run
-          services."sing-a-long-karaoke" = {
-            # This is the command that starts the Next.js server
-            command = "npm run start";
-            # This tells the service what port to expose.
-            # $PORT is automatically provided by the App Hosting environment.
-            listen = "$PORT";
-          };
+            (deploy-rs.lib.steps.run {
+              # run the Next.js app
+              runCommand = "npm run start";
+
+              serviceConfig = {
+                # these are systemd service options
+                Restart = "always";
+                RestartSec = 5;
+              };
+            })
+          ];
         };
       in
       {
-        # This is the deploy attribute the build system is looking for.
-        packages.deploy = deployment;
+        packages = {
+          # this is the deploy attribute the build system is looking for
+          deploy = deployment;
+        };
 
-        # A development shell for local use
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           buildInputs = [
-            pkgs.nodejs_20_x
+            pkgs.nodejs_20
           ];
         };
       });
