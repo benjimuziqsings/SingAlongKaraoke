@@ -2,11 +2,22 @@
 import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2024-06-20',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY as string;
+
+let stripe: Stripe | null = null;
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2024-06-20',
+  });
+} else {
+    console.warn("Stripe secret key is not set. Tipping will be disabled.");
+}
 
 export async function POST(req: NextRequest) {
+  if (!stripe) {
+    return NextResponse.json({ error: 'Stripe is not configured. The server is missing a secret key.' }, { status: 500 });
+  }
+
   try {
     const { amount } = await req.json();
     const origin = req.headers.get('origin') || 'http://localhost:3000';
