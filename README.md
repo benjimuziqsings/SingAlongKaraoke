@@ -2,7 +2,7 @@
 
 This is a Next.js application built for Firebase Studio that allows karaoke bar patrons to submit song requests and a Karaoke Jockey (KJ) to manage the song queue in real time.
 
-This application is configured for deployment on **Firebase App Hosting**.
+This application is configured for deployment on **Firebase App Hosting**. 
 
 ## Production Checklist
 
