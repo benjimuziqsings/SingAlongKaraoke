@@ -4,8 +4,16 @@
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 export default function PrivacyPolicyPage() {
+  const [lastUpdated, setLastUpdated] = useState('');
+
+  useEffect(() => {
+    // This ensures the date is only generated on the client, avoiding hydration errors.
+    setLastUpdated(new Date().toLocaleDateString());
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent">
       <Header />
@@ -16,7 +24,7 @@ export default function PrivacyPolicyPage() {
               Privacy Policy for Sing A Long Karaoke
             </CardTitle>
             <CardDescription>
-              Last Updated: {new Date().toLocaleDateString()}
+              Last Updated: {lastUpdated}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
