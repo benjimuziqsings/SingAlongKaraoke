@@ -3,63 +3,58 @@
   description = "Sing A Long Karaoke Deployment";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
 
-  outputs = { self, nixpkgs, deploy-rs, ... }:
+  outputs = { self, nixpkgs, deploy-rs }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
-        config.allowUnfree = true;
+        overlays = [ deploy-rs.overlays.default ];
       };
+      
+      # This is the correct way to define the deployment using the deploy-rs overlay.
+      # The overlay makes `pkgs.mkDeployment` available.
+      deployment = pkgs.mkDeployment {
+        name = "sing-a-long-karaoke-deployment";
+        
+        # Specify the Node.js version and any other system dependencies here.
+        packages = [
+          pkgs.nodejs_20
+        ];
 
-      deployment = deploy-rs.lib.${system}.mkDeployment {
-        inherit pkgs;
-        deploymentName = "sing-a-long-karaoke-deployment";
-
-        nodes = {
-          app = {
-            # This configuration does not define a real machine.
-            # It's used by the build system to understand how to
-            # build and run the application.
-            config = {
-              services.sing-a-long-karaoke = {
-                enable = true;
-                package = self.packages.${system}.default;
-              };
-            };
-          };
+        # Define the steps to build the Next.js application.
+        build = {
+          copy = [
+            ./package.json
+            ./package-lock.json
+            ./next.config.js
+            ./tsconfig.json
+            ./src
+            ./public
+          ];
+          
+          # The command to install dependencies and build the app.
+          # The --legacy-peer-deps flag is added to handle potential peer dependency conflicts.
+          command = ''
+            npm install --legacy-peer-deps
+            npm run build
+          '';
         };
 
-        magicRollback = false;
+        # Define the command to start the application.
+        run = {
+          command = ["npm", "start"];
+          
+          # Expose port 3000 for the Next.js server.
+          ports = [3000];
+        };
       };
     in
     {
-      packages.x86_64-linux.default = pkgs.stdenv.mkDerivation {
-        name = "sing-a-long-karaoke";
-        src = ./.;
-        buildInputs = [ pkgs.nodejs-20_x ];
-        buildPhase = ''
-          export HOME=$(mktemp -d)
-          npm install
-          npm run build
-        '';
-        installPhase = ''
-          mkdir -p $out
-          cp -R . $out/
-        '';
-      };
-
-      # This is the deploy attribute the build system is looking for.
-      packages.x86_64-linux.deploy = deployment;
-
-      devShells.x86_64-linux.default = pkgs.mkShell {
-        buildInputs = [
-          pkgs.nodejs-20_x
-          pkgs.nodePackages.npm
-        ];
-      };
+      # This is the attribute the build system is looking for.
+      packages.${system}.deploy = deployment;
     };
 }
