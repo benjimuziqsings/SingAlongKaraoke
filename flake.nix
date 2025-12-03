@@ -2,7 +2,7 @@
   description = "Karaoke Queue Master";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/f720de59066162ee879adcc8c79e15c51fe6bfb4";
     flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
@@ -17,38 +17,43 @@
         };
 
         deployment = pkgs.mkDeployment {
-          name = "karaoke-queue-master-deployment";
-          
-          # This defines the environment where the build and run steps will execute.
-          buildInputs = [ 
-            pkgs.nodejs_20 
-            pkgs.openssl 
-          ];
+          name = "sing-a-long-karaoke";
 
-          # These steps build your Next.js application.
-          build = {
-            # Install npm dependencies
-            install = {
-              command = [ "npm" "install" ];
-            };
-            # Build the Next.js app
-            build = {
-              command = [ "npm" "run" "build" ];
-            };
+          deployment.services.app = {
+            # This is the main service for your Next.js app.
+            # It will be started automatically.
           };
 
-          # This specifies the command to start your application server.
+          # The profile defines the packages and files that will be available
+          # in your deployment environment.
+          profile.packages = with pkgs; [
+            nodejs-20_x # Provides Node.js and npm
+          ];
+
+          # Build steps for your Next.js application
+          build = {
+            # Install npm dependencies
+            # The node_modules directory will be cached between builds.
+            pre-build.command = [ "npm" "install" "--legacy-peer-deps" ];
+            # Build the Next.js application for production
+            build.command = [ "npm" "run" "build" ];
+          };
+
+          # How to run your application
           run = {
             command = [ "npm" "start" ];
           };
-          
-          # This specifies that the deployment is a long-running service.
-          services.app = { };
         };
       in
       {
         # This is the deploy attribute the build system is looking for.
         packages.deploy = deployment;
+
+        devShell = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            nodejs-20_x
+          ];
+        };
       }
     );
 }
