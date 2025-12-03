@@ -1,30 +1,23 @@
+
 {
-  "description": "Karaoke Queue Master",
-  "inputs": {
-    "nixpkgs": {
-      "url": "github:NixOS/nixpkgs/nixos-unstable"
-    },
-    "flake-utils": {
-      "url": "github:numtide/flake-utils"
-    }
-  },
-  "outputs": {
-    "self": _,
-    "nixpkgs": _,
-    "flake-utils": flake-utils,
-    ...
-  }:
+  description = "A Next.js application for karaoke song requests.";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = nixpkgs.legacyPackages.${system};
       in
       {
-        devShells = {
-          default = pkgs.mkShell {
-            buildInputs = [
-              pkgs.nodejs
-            ];
-          };
+        devShells.default = pkgs.mkShell {
+          packages = [
+            pkgs.nodejs_20
+          ];
         };
-      })
+      }
+    );
 }
