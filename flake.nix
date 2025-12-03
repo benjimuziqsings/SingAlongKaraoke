@@ -1,52 +1,49 @@
-
 {
   description = "Karaoke Queue Master";
+
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/f720de59066162ee879adcc8c79e15c51fe6bfb4"; # nixos-23.11
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
     flake-utils.url = "github:numtide/flake-utils";
     deploy-rs.url = "github:serokell/deploy-rs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, deploy-rs }:
-    flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+  outputs = { self, nixpkgs, flake-utils, deploy-rs, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ deploy-rs.overlay ];
         pkgs = import nixpkgs {
-          inherit system overlays;
+          inherit system;
+          inherit overlays;
         };
 
         deployment = pkgs.mkDeployment {
-          name = "sing-a-long-karaoke";
+          name = "karaoke-queue-master-deployment";
           
-          # Build steps for the Next.js application
-          build = {
-            # This assumes a standard Next.js project with a `build` script in package.json
-            command = "npm run build";
-            # List files and directories from the source to be included in the build environment
-            sources = [
-              ./package.json
-              ./package-lock.json
-              ./next.config.js
-              ./tsconfig.json
-              ./src
-              ./public
-              ./apphosting.yaml
-              ./firebase.json
-            ];
-          };
-
-          # The packages required at runtime
+          # This defines the environment where the build and run steps will execute.
           buildInputs = [ 
-            pkgs.nodejs 
+            pkgs.nodejs_20 
+            pkgs.openssl 
           ];
 
-          # Deployment target configuration
-          target = "local";
+          # These steps build your Next.js application.
+          build = {
+            # Install npm dependencies
+            install = {
+              command = [ "npm" "install" ];
+            };
+            # Build the Next.js app
+            build = {
+              command = [ "npm" "run" "build" ];
+            };
+          };
 
-          # How to run the application
+          # This specifies the command to start your application server.
           run = {
             command = [ "npm" "start" ];
           };
+          
+          # This specifies that the deployment is a long-running service.
+          services.app = { };
         };
       in
       {
