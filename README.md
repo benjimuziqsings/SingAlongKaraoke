@@ -19,10 +19,10 @@ To enable the tipping feature, you must add your Stripe API keys to Firebase as 
 2.  **Add Keys as Secrets:**
     *   Under the **Settings** tab, add the following two secrets:
         *   **Secret name:** `STRIPE_SECRET_KEY`
-        *   **Secret value:** `***REMOVED***`
+        *   **Secret value:** `sk_live_...` (Your secret key)
     *   Create a second secret:
         *   **Secret name:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-        *   **Secret value:** `***REMOVED***`
+        *   **Secret value:** `pk_live_...` (Your publishable key)
     *   After adding the secrets, App Hosting will automatically trigger a new rollout to apply them.
 
 ### 2. Connect a Custom Domain

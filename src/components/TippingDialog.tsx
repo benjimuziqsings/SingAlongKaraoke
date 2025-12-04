@@ -26,7 +26,7 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const tipAmounts = [2, 5, 10, 15, 20];
 
-// Make sure to replace this with your actual public key
+// Initialize Stripe.js with the publishable key from environment variables
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 function CashAppIcon() {
