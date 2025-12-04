@@ -8,6 +8,7 @@
     pkgs.nodejs_20
     pkgs.zulu
     pkgs.deploy-rs
+    pkgs.undollar
   ];
   # Sets environment variables in the workspace
   env = {};
